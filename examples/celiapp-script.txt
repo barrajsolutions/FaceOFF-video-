@@ -1,0 +1,17 @@
+Saving for your first home? The CELIAPP, or First Home Savings Account, might be the best tool in Canada to get there. [CELIAPP = First Home Savings] {house}
+
+It mixes the best of an RRSP and a CELI. Your contributions are tax-deductible, and withdrawals to buy your first home are tax-free. [Deduct in · Tax-free out] {money}
+
+You can put in eight thousand dollars a year, up to forty thousand dollars in your lifetime. [$8,000 a year · $40,000 max] {calendar}
+
+Unused room carries forward, but only up to eight thousand dollars. So open your account early, even with zero dollars in it. [Open it early!] {clock}
+
+To qualify, you must be a Canadian resident, at least eighteen, and a first-time buyer. That means you didn't live in a home you owned this year or in the previous four. [Resident · 18+ · First-time buyer] {person}
+
+The account can stay open for up to fifteen years. If you don't buy, you can move the money to your RRSP, tax-free. [Up to 15 years] {arrow}
+
+But be careful. Putting in too much costs a one percent tax, every month, on the extra amount. [Over-contribution: 1% per month] {warning}
+
+The rules are in section one forty-six point six of the Income Tax Act. [Income Tax Act, s. 146.6] {book}
+
+Start your CELIAPP today, and get your keys sooner. [Your first home, sooner!] {trophy}
