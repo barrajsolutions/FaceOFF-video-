@@ -7,7 +7,7 @@
   <meta name="description" content="Make faceless videos in your browser: script, visuals, voiceover, music and animated captions." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Patrick+Hand&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -20,29 +20,64 @@
     <section class="panel" aria-label="Video settings">
       <details open>
         <summary><span class="step">1</span> Script</summary>
-        <p class="hint">Each paragraph (blank line between) becomes one scene. Captions follow the words.</p>
+        <p class="hint">Each paragraph (blank line between) becomes one scene. Put <code>*stars*</code> around words the hand should write on the board. Curly brackets like <code>{idea}</code> pick a doodle. Neither is read out or shown in captions.</p>
         <textarea id="script" rows="10" spellcheck="true"></textarea>
         <div class="row between small muted"><span id="scriptStats"></span><button id="clearScript" class="link" type="button">Clear</button></div>
       </details>
 
       <details open>
         <summary><span class="step">2</span> Visuals</summary>
-        <p class="hint">Add stock clips, B-roll, screen recordings or images. They play one per scene, in order, and repeat if you have fewer than scenes. With none, an animated background is used.</p>
-        <label class="drop" id="mediaDrop">
+        <div class="seg" role="radiogroup" id="modeSeg" aria-label="Video style">
+          <button type="button" data-v="whiteboard" class="on">✎ Whiteboard animation</button>
+          <button type="button" data-v="footage">▶ Clips &amp; images</button>
+        </div>
+
+        <div id="wbOptions">
+          <p class="hint top-gap">A hand draws each scene on a board. Doodles are picked automatically from your words, or choose one by typing its name in curly brackets, like <code>{money}</code>. Uploaded images are turned into sketches: image 1 is drawn in scene 1, image 2 in scene 2, and so on.</p>
+          <div class="grid2">
+            <div class="field">
+              <label for="wbBoard">Board</label>
+              <select id="wbBoard">
+                <option value="white">Whiteboard</option>
+                <option value="paper">Paper</option>
+                <option value="chalk">Chalkboard</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="wbHand">Drawing hand</label>
+              <select id="wbHand">
+                <option value="hand">Hand with marker</option>
+                <option value="marker">Marker only</option>
+                <option value="none">No hand</option>
+              </select>
+            </div>
+          </div>
+          <label class="check"><input id="wbColor" type="checkbox" checked /> Color in drawings after sketching</label>
+          <div class="field">
+            <span class="label">Doodles (tap to add to the script)</span>
+            <div id="doodleChips" class="chips"></div>
+          </div>
+        </div>
+
+        <div id="footageOptions" hidden>
+          <p class="hint top-gap">Clips and images play one per scene, in order, and repeat if you have fewer than scenes. With none, an animated background is used.</p>
+          <div class="field">
+            <label for="theme">Background when no visuals</label>
+            <select id="theme">
+              <option value="midnight">Midnight</option>
+              <option value="sunset">Sunset</option>
+              <option value="ocean">Ocean</option>
+              <option value="forest">Forest</option>
+              <option value="mono">Mono</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="drop top-gap" id="mediaDrop">
           <input id="mediaInput" type="file" accept="image/*,video/*" multiple hidden />
-          <strong>Add clips or images</strong><span class="small muted">or drop files here</span>
+          <strong id="dropTitle">Add images to sketch</strong><span class="small muted">or drop files here</span>
         </label>
         <ul id="mediaList" class="media-list"></ul>
-        <div class="field">
-          <label for="theme">Background when no visuals</label>
-          <select id="theme">
-            <option value="midnight">Midnight</option>
-            <option value="sunset">Sunset</option>
-            <option value="ocean">Ocean</option>
-            <option value="forest">Forest</option>
-            <option value="mono">Mono</option>
-          </select>
-        </div>
       </details>
 
       <details open>
@@ -84,8 +119,8 @@
           <div class="field">
             <label for="capStyle">Caption style</label>
             <select id="capStyle">
+              <option value="boxed" selected>Boxed</option>
               <option value="pop">Bold pop</option>
-              <option value="boxed">Boxed</option>
               <option value="clean">Clean</option>
               <option value="none">No captions</option>
             </select>
@@ -93,8 +128,8 @@
           <div class="field">
             <label for="capPos">Position</label>
             <select id="capPos">
+              <option value="lower" selected>Bottom</option>
               <option value="center">Middle</option>
-              <option value="lower">Lower third</option>
             </select>
           </div>
           <div class="field">
@@ -138,6 +173,7 @@
     </section>
   </main>
 
+  <script src="whiteboard.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

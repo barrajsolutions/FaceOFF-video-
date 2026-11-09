@@ -25,19 +25,22 @@
   };
   const WORDS_PER_SEC = 2.6;   // reading pace used when there is no voiceover
   const FADE = 0.4;            // seconds of crossfade between scenes
+  const SLIDE = 0.55;          // seconds of whiteboard slide between scenes
   const STORAGE_KEY = 'faceoff.script';
 
-  const DEFAULT_SCRIPT = `Most people never realize this about sleep.
+  const DEFAULT_SCRIPT = `Most people never realize *this about sleep*.
 
-Your brain doesn't switch off at night. It cleans itself.
+Your brain doesn't switch off at night. *It cleans itself.*
 
-While you sleep, fluid washes through your brain and clears out waste that built up during the day.
+While you sleep, fluid washes through your brain and *clears out waste*. {drop}
 
-Skip sleep, and that waste stays put. That's part of why everything feels foggy.
+Skip sleep, and that waste stays put. That's part of why *everything feels foggy*.
 
-So tonight, put the phone down an hour earlier. Your brain will thank you.`;
+So tonight, put the phone down *an hour earlier*. Your brain will thank you.`;
 
   const state = {
+    mode: 'whiteboard',   // 'whiteboard' | 'footage'
+    wb: { board: 'white', hand: 'hand', colorize: true },
     aspect: '9:16',
     theme: 'midnight',
     media: [],            // { type: 'image'|'video', el, name, url }
@@ -45,7 +48,7 @@ So tonight, put the phone down an hour earlier. Your brain will thank you.`;
     music: null,          // { buffer, name }
     musicVolume: 0.2,
     offset: 0,
-    captions: { style: 'pop', position: 'center', wordsPer: 3, color: '#ffd400', size: 1 },
+    captions: { style: 'boxed', position: 'lower', wordsPer: 3, color: '#ffd400', size: 1 },
     progressBar: true,
     timeline: null,
     playing: false,
@@ -153,7 +156,16 @@ So tonight, put the phone down an hour earlier. Your brain will thank you.`;
     const texts = splitScenes($('#script').value);
     if (!texts.length) return null;
 
-    const scenes = texts.map((text) => ({ text, words: text.split(' ').filter(Boolean).map((w) => ({ text: w })) }));
+    // *stars* mark words to hand-write; {name} picks a doodle. Neither is spoken or captioned.
+    const scenes = texts.map((raw) => {
+      const tag = (raw.match(/\{\s*([\w-]+)\s*\}/) || [])[1];
+      const marks = [...raw.matchAll(/\*([^*]+)\*/g)].map((m) => m[1].trim()).filter(Boolean);
+      const text = raw.replace(/\{\s*[\w-]+\s*\}/g, '').replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+      const words = text.split(' ').filter(Boolean).map((w) => ({ text: w }));
+      const write = marks.length ? marks.join(' … ') : (words.length <= 7 ? text : null);
+      return { text, words, tag: tag ? tag.toLowerCase() : null, write, wb: {} };
+    }).filter((s) => s.words.length);
+    if (!scenes.length) return null;
     const allWords = scenes.flatMap((s) => s.words);
     const SCENE_PAUSE = 4;
     const totalWeight = allWords.reduce((a, w) => a + wordWeight(w.text), 0) + SCENE_PAUSE * (scenes.length - 1);
@@ -251,6 +263,18 @@ So tonight, put the phone down an hour earlier. Your brain will thank you.`;
     }
   }
 
+  // Whiteboard visual for a scene: {doodle} tag, else the i-th uploaded image, else a keyword doodle.
+  function wbVisual(sc, i) {
+    if (sc.tag === 'none' || sc.tag === 'text') return null;
+    if (sc.tag && Whiteboard.DOODLES[sc.tag]) return { kind: 'doodle', name: sc.tag };
+    const images = state.media.filter((m) => m.type === 'image' && m.sketch);
+    const im = sc.tag && /^img(\d+)$/.exec(sc.tag);
+    if (im) return images[Number(im[1]) - 1] ? { kind: 'image', media: images[Number(im[1]) - 1] } : null;
+    if (images[i]) return { kind: 'image', media: images[i] };
+    const name = Whiteboard.findDoodle(sc.write, sc.text);
+    return name ? { kind: 'doodle', name } : null;
+  }
+
   function mediaFor(i) {
     return state.media.length ? state.media[i % state.media.length] : null;
   }
@@ -321,11 +345,34 @@ So tonight, put the phone down an hour earlier. Your brain will thank you.`;
       if (lastScene >= 0 && !still) pctx.drawImage(visual, 0, 0);
       lastScene = i;
     }
-    syncVideos(mediaFor(i), local, still);
-    drawVisual(vctx, sc, i, te);
+    const wb = state.mode === 'whiteboard';
+    if (wb) {
+      syncVideos(null, 0, true);
+      const start = i === 0 ? 0.25 : SLIDE + 0.1;
+      const lowerCaps = state.captions.style !== 'none' && state.captions.position === 'lower';
+      Whiteboard.drawScene(vctx, { visual: wbVisual(sc, i), write: sc.write, state: sc.wb }, local, sc.end - sc.start, {
+        board: state.wb.board, hand: state.wb.hand, colorize: state.wb.colorize, start, still,
+        bottomReserve: lowerCaps ? (H > W ? 0.2 : 0.2) : 0.05,
+      });
+    } else {
+      syncVideos(mediaFor(i), local, still);
+      drawVisual(vctx, sc, i, te);
+    }
+
+    if (wb && !still && i > 0 && local < SLIDE) {
+      // Whiteboard transition: the board slides along to a fresh area.
+      const e = local / SLIDE;
+      const k = e < 0.5 ? 2 * e * e : 1 - Math.pow(-2 * e + 2, 2) / 2;
+      ctx.drawImage(prev, -k * W, 0);
+      ctx.drawImage(visual, (1 - k) * W, 0);
+    } else if (wb) {
+      ctx.drawImage(visual, 0, 0);
+    }
 
     const alpha = still || i === 0 ? 1 : Math.min(1, local / FADE);
-    if (alpha < 1) {
+    if (wb) {
+      // already composited
+    } else if (alpha < 1) {
       ctx.drawImage(prev, 0, 0);
       ctx.globalAlpha = alpha;
       ctx.drawImage(visual, 0, 0);
@@ -334,14 +381,16 @@ So tonight, put the phone down an hour earlier. Your brain will thank you.`;
       ctx.drawImage(visual, 0, 0);
     }
 
-    // Darken for caption legibility.
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, 'rgba(0,0,0,0.25)');
-    g.addColorStop(0.35, 'rgba(0,0,0,0.05)');
-    g.addColorStop(0.65, 'rgba(0,0,0,0.15)');
-    g.addColorStop(1, 'rgba(0,0,0,0.55)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+    if (!wb) {
+      // Darken for caption legibility.
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, 'rgba(0,0,0,0.25)');
+      g.addColorStop(0.35, 'rgba(0,0,0,0.05)');
+      g.addColorStop(0.65, 'rgba(0,0,0,0.15)');
+      g.addColorStop(1, 'rgba(0,0,0,0.55)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
 
     if (state.captions.style !== 'none') drawCaption(tl, te);
 
@@ -383,7 +432,8 @@ So tonight, put the phone down an hour earlier. Your brain will thank you.`;
     if (line.length) lines.push({ items: line, width: lw });
 
     const lh = base * 1.25;
-    const cy = position === 'center' ? H * 0.5 : H * (H > W ? 0.74 : 0.8);
+    const lowerY = state.mode === 'whiteboard' ? (H > W ? 0.88 : 0.89) : (H > W ? 0.74 : 0.8);
+    const cy = position === 'center' ? H * 0.5 : H * lowerY;
     const top = cy - (lines.length * lh) / 2 + lh / 2;
 
     // Pop-in when a new chunk appears.
@@ -621,9 +671,13 @@ So tonight, put the phone down an hour earlier. Your brain will thank you.`;
       const url = URL.createObjectURL(file);
       if (file.type.startsWith('image/')) {
         const el = new Image();
-        el.onload = () => { if (!state.playing) render(state.t, true); };
+        const item = { type: 'image', el, name: file.name, url, sketch: null };
+        el.onload = () => {
+          try { item.sketch = Whiteboard.prepareSketch(el); } catch (_) {}
+          if (!state.playing) render(state.t, true);
+        };
         el.src = url;
-        state.media.push({ type: 'image', el, name: file.name, url });
+        state.media.push(item);
       } else if (file.type.startsWith('video/')) {
         const el = document.createElement('video');
         el.muted = true; el.playsInline = true; el.loop = true; el.preload = 'auto';
@@ -785,6 +839,46 @@ So tonight, put the phone down an hour earlier. Your brain will thank you.`;
 
     $('#theme').onchange = (e) => { state.theme = e.target.value; if (!state.playing) render(state.t, true); };
 
+    const redraw = () => { if (!state.playing) render(state.t, true); };
+    const applyMode = () => {
+      const wb = state.mode === 'whiteboard';
+      document.querySelectorAll('#modeSeg button').forEach((x) => x.classList.toggle('on', x.dataset.v === state.mode));
+      $('#wbOptions').hidden = !wb;
+      $('#footageOptions').hidden = wb;
+      $('#dropTitle').textContent = wb ? 'Add images to sketch' : 'Add clips or images';
+      $('#mediaInput').accept = wb ? 'image/*' : 'image/*,video/*';
+      lastScene = -1;
+      redraw();
+    };
+    $('#modeSeg').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-v]');
+      if (!b) return;
+      state.mode = b.dataset.v;
+      applyMode();
+    });
+    $('#wbBoard').onchange = (e) => { state.wb.board = e.target.value; redraw(); };
+    $('#wbHand').onchange = (e) => { state.wb.hand = e.target.value; redraw(); };
+    $('#wbColor').onchange = (e) => { state.wb.colorize = e.target.checked; redraw(); };
+    const chips = $('#doodleChips');
+    for (const name of Whiteboard.names) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = name;
+      b.title = `Add {${name}} to the scene where your cursor is`;
+      b.onclick = () => {
+        const ta = $('#script');
+        const pos = ta.selectionEnd ?? ta.value.length;
+        // Put the tag at the end of the paragraph the cursor is in.
+        let end = ta.value.indexOf('\n\n', pos);
+        if (end < 0) end = ta.value.replace(/\s+$/, '').length;
+        const before = ta.value.slice(0, end).replace(/\s*\{[\w-]+\}\s*$/, '');
+        ta.value = `${before} {${name}}${ta.value.slice(end)}`;
+        ta.dispatchEvent(new Event('input'));
+      };
+      chips.appendChild(b);
+    }
+    applyMode();
+
     $('#voiceInput').onchange = (e) => { const f = e.target.files[0]; if (f) setVoice(f, f.name); e.target.value = ''; };
     $('#recordBtn').onclick = toggleRecord;
     $('#musicInput').onchange = (e) => { const f = e.target.files[0]; if (f) setMusic(f); e.target.value = ''; };
@@ -836,7 +930,7 @@ So tonight, put the phone down an hour earlier. Your brain will thank you.`;
     bind();
     // Show a mid-scene frame so the preview isn't blank.
     rebuild();
-    try { await document.fonts.load('800 80px Montserrat'); await document.fonts.load('600 80px Montserrat'); } catch (_) {}
+    try { await Promise.all(['800 80px Montserrat', '600 80px Montserrat', '80px "Patrick Hand"'].map((f) => document.fonts.load(f))); } catch (_) {}
     if (state.timeline) state.t = Math.min(1.2, state.timeline.total);
     rebuild();
   }
