@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FaceOFF Video</title>
+  <meta name="description" content="Make faceless videos in your browser: script, visuals, voiceover, music and animated captions." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo" aria-hidden="true"></span> FaceOFF <span class="muted">Video</span></div>
+    <div class="muted small">Faceless videos, made in your browser. Your files never leave this device.</div>
+  </header>
+
+  <main class="layout">
+    <section class="panel" aria-label="Video settings">
+      <details open>
+        <summary><span class="step">1</span> Script</summary>
+        <p class="hint">Each paragraph (blank line between) becomes one scene. Captions follow the words.</p>
+        <textarea id="script" rows="10" spellcheck="true"></textarea>
+        <div class="row between small muted"><span id="scriptStats"></span><button id="clearScript" class="link" type="button">Clear</button></div>
+      </details>
+
+      <details open>
+        <summary><span class="step">2</span> Visuals</summary>
+        <p class="hint">Add stock clips, B-roll, screen recordings or images. They play one per scene, in order, and repeat if you have fewer than scenes. With none, an animated background is used.</p>
+        <label class="drop" id="mediaDrop">
+          <input id="mediaInput" type="file" accept="image/*,video/*" multiple hidden />
+          <strong>Add clips or images</strong><span class="small muted">or drop files here</span>
+        </label>
+        <ul id="mediaList" class="media-list"></ul>
+        <div class="field">
+          <label for="theme">Background when no visuals</label>
+          <select id="theme">
+            <option value="midnight">Midnight</option>
+            <option value="sunset">Sunset</option>
+            <option value="ocean">Ocean</option>
+            <option value="forest">Forest</option>
+            <option value="mono">Mono</option>
+          </select>
+        </div>
+      </details>
+
+      <details open>
+        <summary><span class="step">3</span> Voice &amp; music</summary>
+        <p class="hint">Upload a voiceover or record one with your mic. The video length matches the voiceover; silence at the start and end is detected automatically.</p>
+        <div class="row gap">
+          <label class="btn secondary">
+            <input id="voiceInput" type="file" accept="audio/*,video/*" hidden />Upload voiceover
+          </label>
+          <button id="recordBtn" class="btn secondary" type="button">● Record with mic</button>
+        </div>
+        <div id="voiceInfo" class="file-info small muted">No voiceover: captions are timed at a natural reading pace.</div>
+        <div class="field">
+          <label for="offset">Caption timing nudge <output id="offsetOut">0.0 s</output></label>
+          <input id="offset" type="range" min="-1.5" max="1.5" step="0.1" value="0" />
+        </div>
+        <hr />
+        <label class="btn secondary">
+          <input id="musicInput" type="file" accept="audio/*" hidden />Add background music
+        </label>
+        <div id="musicInfo" class="file-info small muted">No music.</div>
+        <div class="field">
+          <label for="musicVol">Music volume <output id="musicVolOut">20%</output></label>
+          <input id="musicVol" type="range" min="0" max="1" step="0.01" value="0.2" />
+        </div>
+      </details>
+
+      <details open>
+        <summary><span class="step">4</span> Format &amp; captions</summary>
+        <div class="field">
+          <span class="label">Shape</span>
+          <div class="seg" role="radiogroup" id="aspectSeg">
+            <button type="button" data-v="9:16" class="on">9:16 Shorts / Reels / TikTok</button>
+            <button type="button" data-v="16:9">16:9 YouTube</button>
+            <button type="button" data-v="1:1">1:1 Square</button>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="capStyle">Caption style</label>
+            <select id="capStyle">
+              <option value="pop">Bold pop</option>
+              <option value="boxed">Boxed</option>
+              <option value="clean">Clean</option>
+              <option value="none">No captions</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="capPos">Position</label>
+            <select id="capPos">
+              <option value="center">Middle</option>
+              <option value="lower">Lower third</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="wordsPer">Words on screen</label>
+            <select id="wordsPer">
+              <option value="1">1 at a time</option>
+              <option value="2">Up to 2</option>
+              <option value="3" selected>Up to 3</option>
+              <option value="5">Up to 5</option>
+              <option value="8">Up to 8</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="capColor">Highlight color</label>
+            <input id="capColor" type="color" value="#ffd400" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="capSize">Caption size <output id="capSizeOut">100%</output></label>
+          <input id="capSize" type="range" min="0.6" max="1.6" step="0.05" value="1" />
+        </div>
+        <label class="check"><input id="progressBar" type="checkbox" checked /> Show progress bar</label>
+      </details>
+    </section>
+
+    <section class="preview" aria-label="Preview">
+      <div class="stage-wrap" id="stageWrap">
+        <canvas id="stage" width="1080" height="1920"></canvas>
+      </div>
+      <div class="transport">
+        <button id="playBtn" class="btn round" type="button" aria-label="Play">▶</button>
+        <input id="seek" type="range" min="0" max="1" step="0.01" value="0" aria-label="Position" />
+        <span id="time" class="small mono">0:00 / 0:00</span>
+      </div>
+      <div class="export">
+        <button id="exportBtn" class="btn primary" type="button">Make video</button>
+        <button id="srtBtn" class="btn secondary" type="button">Download captions (.srt)</button>
+      </div>
+      <div id="exportStatus" class="status small" hidden></div>
+      <p class="hint center">Making the video plays it once in real time, so keep this tab open and in front until it finishes.</p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
