@@ -1,0 +1,19 @@
+What is a CELI? It's a Tax-Free Savings Account, launched by the Government of Canada in 2009. [CELI = Tax-Free Savings] {idea}
+
+Any money you earn inside it, like interest, dividends or investment gains, is never taxed. Not even when you take it out. [0% tax on growth] {money}
+
+To open one, you must be eighteen or older, a resident of Canada, and have a valid social insurance number. [18+ · Resident · SIN] {person}
+
+For 2026, you can put in up to seven thousand dollars. [2026 limit: $7,000] {calendar}
+
+And unused room carries forward. If you were eighteen in 2009 and never contributed, you now have one hundred and nine thousand dollars of room. [Total room: $109,000] {growth}
+
+Need your money? You can withdraw any time. The amount comes back as new room on January first of the next year. [Withdraw any time] {clock}
+
+But be careful. Putting in more than your room costs a one percent tax, every month, on the extra amount. [Over-contribution: 1% per month] {warning}
+
+Inside your CELI, you can hold cash, GICs, bonds, stocks and ETFs. [Cash · GICs · Bonds · Stocks · ETFs] {gear}
+
+The rules are in section one forty-six point two of the Income Tax Act. Check your exact room in your CRA My Account. [Income Tax Act, s. 146.2] {book}
+
+Start early, and let your money grow tax-free. [Grow tax-free!] {rocket}

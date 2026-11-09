@@ -16,7 +16,8 @@ While you sleep, fluid washes through your brain and *clears out waste*. {drop}
 ```
 
 - Each paragraph is one scene.
-- `*stars*` mark the words the hand writes on the board.
+- `*stars*` mark spoken words the hand also writes on the board.
+- `[square brackets]` are written on the board only: not spoken, not in the captions. Good for labels like `[2026 limit: $7,000]`.
 - `{name}` picks a doodle. Without one, a doodle is chosen from your words (e.g. "money" draws a coin, "sleep" a moon).
   There are about 30: idea, brain, heart, star, moon, sun, clock, calendar, money, check, cross, growth, decline, phone, drop, cloud, person, house, book, target, talk, question, warning, coffee, trophy, gear, search, battery, rocket, apple, lock, arrow.
 - `{img2}` draws your 2nd uploaded image, and `{none}` leaves out the drawing. Otherwise image 1 goes in scene 1, image 2 in scene 2, and so on.

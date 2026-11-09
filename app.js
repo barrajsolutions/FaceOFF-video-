@@ -101,6 +101,34 @@ So tonight, put the phone down *an hour earlier*. Your brain will thank you.`;
     return e - s > 0.5 ? [s, e] : [0, buffer.duration];
   }
 
+  // Quiet gaps (>= 0.3 s) inside the speech, used to line scene changes up with the voice.
+  function detectPauses(buffer, speechStart, speechEnd) {
+    const data = buffer.getChannelData(0);
+    const rate = buffer.sampleRate;
+    const win = Math.floor(rate * 0.02);
+    const rms = [];
+    let peak = 0;
+    for (let i = 0; i + win <= data.length; i += win) {
+      let sum = 0;
+      for (let j = i; j < i + win; j++) sum += data[j] * data[j];
+      const r = Math.sqrt(sum / win);
+      rms.push(r);
+      if (r > peak) peak = r;
+    }
+    const th = Math.max(0.003, peak * 0.04);
+    const pauses = [];
+    let start = -1;
+    rms.forEach((r, k) => {
+      const t = (k * win) / rate;
+      if (r < th) { if (start < 0) start = t; }
+      else if (start >= 0) {
+        if (t - start >= 0.3 && start > speechStart && t < speechEnd) pauses.push({ start, end: t });
+        start = -1;
+      }
+    });
+    return pauses;
+  }
+
   function stopAudioNodes() {
     for (const n of [voiceNode, musicNode]) { if (n) { try { n.stop(); } catch (_) {} n.disconnect(); } }
     voiceNode = musicNode = null;
@@ -156,11 +184,13 @@ So tonight, put the phone down *an hour earlier*. Your brain will thank you.`;
     const texts = splitScenes($('#script').value);
     if (!texts.length) return null;
 
-    // *stars* mark words to hand-write; {name} picks a doodle. Neither is spoken or captioned.
+    // *stars* mark spoken words to also hand-write; [brackets] are board-only text; {name} picks a doodle.
     const scenes = texts.map((raw) => {
       const tag = (raw.match(/\{\s*([\w-]+)\s*\}/) || [])[1];
-      const marks = [...raw.matchAll(/\*([^*]+)\*/g)].map((m) => m[1].trim()).filter(Boolean);
-      const text = raw.replace(/\{\s*[\w-]+\s*\}/g, '').replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+      // [square brackets] = written on the board only, never spoken or captioned.
+      const boardOnly = [...raw.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1].trim()).filter(Boolean);
+      const marks = [...raw.replace(/\[[^\]]*\]/g, '').matchAll(/\*([^*]+)\*/g)].map((m) => m[1].trim()).filter(Boolean).concat(boardOnly);
+      const text = raw.replace(/\[[^\]]*\]/g, '').replace(/\{\s*[\w-]+\s*\}/g, '').replace(/\*/g, '').replace(/\s+/g, ' ').trim();
       const words = text.split(' ').filter(Boolean).map((w) => ({ text: w }));
       const write = marks.length ? marks.join(' … ') : (words.length <= 7 ? text : null);
       return { text, words, tag: tag ? tag.toLowerCase() : null, write, wb: {} };
@@ -186,6 +216,53 @@ So tonight, put the phone down *an hour earlier*. Your brain will thank you.`;
       if (i > 0) t += SCENE_PAUSE * unit;
       for (const w of sc.words) { w.start = t; t += wordWeight(w.text) * unit; w.end = t; }
     });
+
+    // With a voiceover, line scene changes up with real pauses: pick the set of pauses that gives
+    // every scene the most even speaking pace (dynamic programming over all pauses).
+    if (state.voice && state.voice.pauses && state.voice.pauses.length >= scenes.length - 1 && scenes.length > 1) {
+      const P = state.voice.pauses;
+      const n = scenes.length;
+      const sw = scenes.map((sc) => sc.words.reduce((a, w) => a + wordWeight(w.text), 0));
+      const swTotal = sw.reduce((a, v) => a + v, 0);
+      const pauseTime = (n - 1) * 0.5;
+      const rate = Math.max(0.1, speechEnd - speechStart - pauseTime) / swTotal;
+      const cost = (i, from, to) => {
+        const exp = sw[i] * rate;
+        const d = to - from - exp;
+        return to <= from ? Infinity : (d * d) / exp;
+      };
+      // dp[i][k]: best cost with the boundary after scene i placed at pause k.
+      const dp = [], back = [];
+      for (let i = 0; i < n - 1; i++) {
+        dp.push(new Array(P.length).fill(Infinity));
+        back.push(new Array(P.length).fill(-1));
+        for (let k = 0; k < P.length; k++) {
+          if (i === 0) { dp[0][k] = cost(0, speechStart, P[k].start); continue; }
+          for (let j = 0; j < k; j++) {
+            if (dp[i - 1][j] === Infinity) continue;
+            const c = dp[i - 1][j] + cost(i, P[j].end, P[k].start);
+            if (c < dp[i][k]) { dp[i][k] = c; back[i][k] = j; }
+          }
+        }
+      }
+      let bestK = -1, best = Infinity;
+      for (let k = 0; k < P.length; k++) {
+        const c = dp[n - 2][k] + cost(n - 1, P[k].end, speechEnd);
+        if (c < best) { best = c; bestK = k; }
+      }
+      const startAt = [speechStart], endAt = [];
+      if (bestK >= 0) {
+        const chosen = [];
+        for (let i = n - 2, k = bestK; i >= 0; k = back[i][k], i--) chosen.unshift(k);
+        for (const k of chosen) { endAt.push(P[k].start); startAt.push(P[k].end); }
+        endAt.push(speechEnd);
+        scenes.forEach((sc, i) => {
+          const u = Math.max(0.01, endAt[i] - startAt[i]) / sw[i];
+          let tt = startAt[i];
+          for (const w of sc.words) { w.start = tt; tt += wordWeight(w.text) * u; w.end = tt; }
+        });
+      }
+    }
     // Scene boundaries sit halfway through the pause between scenes.
     scenes.forEach((sc, i) => {
       sc.start = i === 0 ? 0 : (scenes[i - 1].words.at(-1).end + sc.words[0].start) / 2;
@@ -738,7 +815,8 @@ So tonight, put the phone down *an hour earlier*. Your brain will thank you.`;
     try {
       const buffer = await decodeFile(fileOrBlob);
       const [speechStart, speechEnd] = detectSpeech(buffer);
-      state.voice = { buffer, name, duration: buffer.duration, speechStart, speechEnd };
+      const pauses = detectPauses(buffer, speechStart, speechEnd);
+      state.voice = { buffer, name, duration: buffer.duration, speechStart, speechEnd, pauses };
       showFileInfo('#voiceInfo', `${name} · ${fmt(buffer.duration)}`, () => {
         state.voice = null;
         $('#voiceInfo').textContent = 'No voiceover: captions are timed at a natural reading pace.';
