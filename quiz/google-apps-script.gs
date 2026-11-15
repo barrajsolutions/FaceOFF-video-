@@ -3,7 +3,7 @@
  * Setup steps are in quiz/README.md.
  */
 const COLUMNS = [
-  "date", "firstName", "email", "phone", "province", "wantsCall",
+  "date", "lang", "firstName", "email", "phone", "province", "wantsCall",
   "result", "second", "age", "ownedHome", "goal", "timeline", "income", "hasCeli",
   "source", "campaign",
 ];

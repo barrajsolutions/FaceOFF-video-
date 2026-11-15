@@ -140,7 +140,7 @@ pre { white-space: pre-wrap; word-break: break-word; background: var(--board); b
 
   <!-- 1. Landing -->
   <section id="intro" class="hero">
-    <span class="eyebrow">Free 1-minute quiz · Canada</span>
+    <div class="row" style="justify-content:space-between"><span class="eyebrow">Free 1-minute quiz · Canada</span><a class="small" href="fr.html" lang="fr" hreflang="fr">Français</a></div>
     <h1>CELI, CELIAPP or RRSP: <span class="mark">which one is right for you?</span></h1>
     <p class="muted">Answer 6 quick questions. Get your personalized result, plus a complete guide to the 2026 limits and rules.</p>
     <ul>
@@ -305,14 +305,10 @@ pre { white-space: pre-wrap; word-break: break-word; background: var(--board); b
   <p>General information about Canadian registered accounts for 2026. It's not financial, tax or legal advice. Check your exact room in CRA My Account and talk to a licensed advisor about your situation.</p>
 </footer>
 
+<script src="config.js"></script>
 <script>
-/* ============ SETTINGS: edit these ============ */
-const CONFIG = {
-  // Paste your Google Apps Script web app URL here (see quiz/README.md).
-  // Leave it empty to save leads only in this browser (for testing; see #admin).
-  LEAD_ENDPOINT: "",
-};
-/* ============================================== */
+// Settings live in config.js (shared with the French page).
+const CONFIG = window.QUIZ_CONFIG || { LEAD_ENDPOINT: "" };
 
 const QUESTIONS = [
   { id: "age", q: "How old are you?", hint: "You need to be 18 to open a CELI or a CELIAPP.",
@@ -521,6 +517,7 @@ $("leadForm").addEventListener("submit", async (e) => {
   const r = lastResult;
   const lead = {
     date: new Date().toISOString(),
+    lang: "en",
     firstName, email, phone,
     province: $("province").value,
     wantsCall: $("call").checked ? "yes" : "no",
