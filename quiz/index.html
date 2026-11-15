@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Which Account Fits You?</title>
+<meta name="description" content="A 1-minute quiz: CELI, CELIAPP or RRSP? Get your personalized result and the full guide to Canada's tax-free accounts." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Patrick+Hand&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* Layout: one narrow whiteboard column; quiz steps swap in place, the guide follows the result. */
+:root {
+  --board: #f6f7f4;
+  --card: #ffffff;
+  --ink: #1b1f2a;
+  --muted: #5d6475;
+  --line: #dcdfe6;
+  --marker: #1d4ed8;
+  --marker-soft: #e3eafc;
+  --highlight: #ffd400;
+  --good: #15803d;
+  --warn: #b45309;
+  --danger: #c0262d;
+  --f-display: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-hand: "Patrick Hand", "Comic Sans MS", "Chalkboard SE", cursive;
+  --radius: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --board: #11141b; --card: #181c25; --ink: #eceff5; --muted: #9aa2b4; --line: #2b3242;
+    --marker: #7aa2ff; --marker-soft: #1d2740; --highlight: #ffd400; --good: #4ade80; --warn: #fbbf24; --danger: #ff6b72;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --board: #11141b; --card: #181c25; --ink: #eceff5; --muted: #9aa2b4; --line: #2b3242;
+  --marker: #7aa2ff; --marker-soft: #1d2740; --highlight: #ffd400; --good: #4ade80; --warn: #fbbf24; --danger: #ff6b72;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--board); color: var(--ink);
+  font: 16px/1.6 var(--f-body);
+  padding-block: 24px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 680px; margin: 0 auto; display: grid; gap: 24px; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.9rem, 6vw, 2.6rem); font-weight: 800; }
+h2 { font-size: 1.5rem; font-weight: 800; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--marker); }
+.hand { font-family: var(--f-hand); font-size: 1.25em; color: var(--marker); }
+.mark { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--highlight) 70%, transparent) 55%); padding: 0 .1em; }
+.eyebrow { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; display: grid; gap: 16px; min-width: 0; }
+.stack { display: grid; gap: 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.muted { color: var(--muted); }
+.small { font-size: .875rem; }
+
+.btn {
+  font: 600 1rem var(--f-body); border-radius: 999px; padding: 14px 26px; cursor: pointer;
+  border: 2px solid var(--ink); background: var(--ink); color: var(--board);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+:focus-visible { outline: 3px solid var(--marker); outline-offset: 2px; }
+
+/* Hero */
+.hero { display: grid; gap: 16px; padding-block: 8px; }
+.hero ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.hero li::before { content: "✓"; color: var(--good); font-weight: 700; margin-right: 8px; }
+
+/* Quiz */
+.progress { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: 0; background: var(--marker); transition: width .3s ease; }
+.options { display: grid; gap: 10px; }
+.opt {
+  text-align: left; font: 500 1rem var(--f-body); color: var(--ink);
+  background: var(--card); border: 2px solid var(--line); border-radius: 12px; padding: 14px 16px; cursor: pointer;
+}
+.opt:hover { border-color: var(--marker); }
+.opt[aria-pressed="true"] { border-color: var(--marker); background: var(--marker-soft); }
+.opt small { display: block; color: var(--muted); font-weight: 400; }
+
+/* Form */
+label { font-weight: 600; font-size: .92rem; display: grid; gap: 6px; }
+input[type="text"], input[type="email"], input[type="tel"], select {
+  font: 1rem var(--f-body); color: var(--ink); background: var(--board);
+  border: 2px solid var(--line); border-radius: 10px; padding: 12px 14px; width: 100%;
+}
+input:focus, select:focus { border-color: var(--marker); outline: none; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; font-size: .875rem; color: var(--muted); }
+.check input { margin-top: 4px; width: 18px; height: 18px; flex: none; }
+.grid2 { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } }
+.error { color: var(--danger); font-size: .875rem; }
+
+/* Result */
+.result-head { display: grid; gap: 8px; }
+.badge { display: inline-block; font: 800 2rem var(--f-display); color: var(--marker); }
+.bars { display: grid; gap: 10px; }
+.bar { display: grid; grid-template-columns: 90px 1fr 44px; gap: 10px; align-items: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bar .track { display: block; height: 12px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar .fill { display: block; height: 100%; background: var(--marker); border-radius: 99px; }
+.reasons { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.note { border-left: 4px solid var(--warn); padding: 10px 14px; background: color-mix(in srgb, var(--warn) 10%, transparent); border-radius: 0 10px 10px 0; font-size: .92rem; }
+
+/* Guide */
+.facts { display: grid; gap: 0; margin: 0; }
+.facts div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.facts div:last-child { border-bottom: 0; }
+.facts dt { color: var(--muted); font-size: .92rem; }
+.facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+video { width: 100%; max-width: 100%; border-radius: 12px; background: #000; aspect-ratio: 9 / 16; max-height: 70vh; object-fit: contain; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: .92rem; }
+th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--f-display); font-weight: 600; }
+td:first-child { color: var(--muted); }
+footer { max-width: 680px; margin: 8px auto 0; font-size: .8rem; color: var(--muted); display: grid; gap: 8px; }
+
+/* Admin */
+pre { white-space: pre-wrap; word-break: break-word; background: var(--board); border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-size: .8rem; max-height: 320px; overflow: auto; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } .btn:hover { transform: none; } }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- 1. Landing -->
+  <section id="intro" class="hero">
+    <span class="eyebrow">Free 1-minute quiz · Canada</span>
+    <h1>CELI, CELIAPP or RRSP: <span class="mark">which one is right for you?</span></h1>
+    <p class="muted">Answer 6 quick questions. Get your personalized result, plus a complete guide to the 2026 limits and rules.</p>
+    <ul>
+      <li>Which account to open first, and why</li>
+      <li>Your 2026 contribution limits</li>
+      <li>The mistakes that cost 1% per month</li>
+    </ul>
+    <div class="row"><button class="btn" id="start" type="button">Start the quiz →</button><span class="hand">takes 60 seconds</span></div>
+  </section>
+
+  <!-- 2. Questions -->
+  <section id="quiz" class="card" hidden>
+    <div class="row" style="justify-content:space-between">
+      <span class="eyebrow" id="qcount">Question 1 of 6</span>
+      <button class="btn ghost small" id="back" type="button" style="padding:6px 14px">← Back</button>
+    </div>
+    <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+    <h2 id="qtext"></h2>
+    <p class="muted small" id="qhint"></p>
+    <div class="options" id="options" role="group"></div>
+  </section>
+
+  <!-- 3. Lead form -->
+  <section id="lead" class="card" hidden>
+    <span class="hand">Your result is ready!</span>
+    <h2>Where should we send your result?</h2>
+    <p class="muted">Enter your info to see your personalized result and the full 2026 guide.</p>
+    <form id="leadForm" class="stack" novalidate>
+      <div class="grid2">
+        <label for="fname">First name<input id="fname" name="firstName" type="text" autocomplete="given-name" required /></label>
+        <label for="email">Email<input id="email" name="email" type="email" autocomplete="email" required /></label>
+      </div>
+      <div class="grid2">
+        <label for="phone"><span>Phone <span class="muted" style="font-weight:400">(optional)</span></span><input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="514-555-0123" /></label>
+        <label for="province">Province
+          <select id="province" name="province">
+            <option>Quebec</option><option>Ontario</option><option>British Columbia</option><option>Alberta</option>
+            <option>Manitoba</option><option>Saskatchewan</option><option>Nova Scotia</option><option>New Brunswick</option>
+            <option>Newfoundland and Labrador</option><option>Prince Edward Island</option><option>Yukon</option>
+            <option>Northwest Territories</option><option>Nunavut</option>
+          </select>
+        </label>
+      </div>
+      <label class="check" for="consent"><input id="consent" type="checkbox" required /><span>I agree to receive my result and occasional emails about saving and investing. I can unsubscribe at any time.</span></label>
+      <label class="check" for="call"><input id="call" type="checkbox" /><span>I'd like a free 15-minute call to talk about my situation.</span></label>
+      <p class="error" id="formError" hidden></p>
+      <button class="btn" id="submit" type="submit">Show my result →</button>
+      <p class="muted small">Your info is never sold or shared.</p>
+    </form>
+  </section>
+
+  <!-- 4. Result -->
+  <section id="result" class="card" hidden>
+    <div class="result-head">
+      <span class="eyebrow" id="rhello">Your result</span>
+      <span class="badge" id="rtitle"></span>
+      <p id="rsummary"></p>
+    </div>
+    <div class="bars" id="rbars"></div>
+    <div class="stack">
+      <h3>Why this fits you</h3>
+      <ul class="reasons" id="rreasons"></ul>
+    </div>
+    <div id="rnote"></div>
+    <div class="row"><button class="btn ghost" id="restart" type="button">Retake the quiz</button><a class="btn ghost" href="#guide" style="text-decoration:none">Read the full guide ↓</a></div>
+  </section>
+
+  <!-- 5. Full guide (after the result) -->
+  <div id="guide" class="stack" hidden style="gap:24px">
+    <h2 style="margin-top:8px">The full guide <span class="hand">(2026)</span></h2>
+
+    <section class="card" id="g-celi">
+      <span class="eyebrow">Tax-Free Savings Account</span>
+      <h2>CELI <span class="muted" style="font-weight:600">(TFSA)</span></h2>
+      <p>Launched in 2009. Interest, dividends and investment gains inside it are <strong>never taxed</strong>, not even when you take the money out.</p>
+      <dl class="facts">
+        <div><dt>Who can open one</dt><dd>18+, Canadian resident, valid SIN</dd></div>
+        <div><dt>2026 limit</dt><dd>$7,000</dd></div>
+        <div><dt>Total room (18+ in 2009, never contributed)</dt><dd>$109,000</dd></div>
+        <div><dt>Unused room</dt><dd>Carries forward with no limit</dd></div>
+        <div><dt>Withdrawals</dt><dd>Any time, tax-free. The amount comes back as room on January 1 of the next year.</dd></div>
+        <div><dt>Tax deduction?</dt><dd>No</dd></div>
+        <div><dt>Over-contribution</dt><dd>1% tax per month on the extra</dd></div>
+        <div><dt>What you can hold</dt><dd>Cash, GICs, bonds, stocks, ETFs</dd></div>
+        <div><dt>The law</dt><dd>Income Tax Act, s. 146.2</dd></div>
+      </dl>
+      <video src="../examples/celi-explained.mp4#t=0.5" controls playsinline preload="metadata"></video>
+    </section>
+
+    <section class="card" id="g-celiapp">
+      <span class="eyebrow">First Home Savings Account</span>
+      <h2>CELIAPP <span class="muted" style="font-weight:600">(FHSA)</span></h2>
+      <p>The best of an RRSP and a CELI: contributions are <strong>tax-deductible</strong>, and withdrawals to buy your first home are <strong>tax-free</strong>.</p>
+      <dl class="facts">
+        <div><dt>Who can open one</dt><dd>18+, Canadian resident, first-time buyer</dd></div>
+        <div><dt>First-time buyer means</dt><dd>You didn't live in a home you owned this year or in the previous 4 calendar years</dd></div>
+        <div><dt>Yearly limit</dt><dd>$8,000</dd></div>
+        <div><dt>Lifetime limit</dt><dd>$40,000</dd></div>
+        <div><dt>Unused room</dt><dd>Carries forward, but only up to $8,000. Room starts the year you open the account, so open it early, even with $0.</dd></div>
+        <div><dt>How long it stays open</dt><dd>Up to 15 years</dd></div>
+        <div><dt>If you don't buy</dt><dd>Move it to your RRSP tax-free (no RRSP room needed)</dd></div>
+        <div><dt>Over-contribution</dt><dd>1% tax per month on the extra</dd></div>
+        <div><dt>The law</dt><dd>Income Tax Act, s. 146.6</dd></div>
+      </dl>
+      <video src="../examples/celiapp-explained.mp4#t=0.5" controls playsinline preload="metadata"></video>
+    </section>
+
+    <section class="card" id="g-reer">
+      <span class="eyebrow">Registered Retirement Savings Plan</span>
+      <h2>RRSP <span class="muted" style="font-weight:600">(REER)</span></h2>
+      <p>Contributions are <strong>deducted from your income</strong>, so you pay less tax now. The money grows tax-sheltered and is taxed when you withdraw it, ideally in retirement when your income is lower.</p>
+      <dl class="facts">
+        <div><dt>2026 limit</dt><dd>18% of your 2025 earned income, up to $33,810</dd></div>
+        <div><dt>Your exact room</dt><dd>On your Notice of Assessment or CRA My Account</dd></div>
+        <div><dt>Unused room</dt><dd>Carries forward with no limit</dd></div>
+        <div><dt>Withdrawals</dt><dd>Taxed as income, with tax withheld at the source. The room is lost.</dd></div>
+        <div><dt>Home Buyers' Plan</dt><dd>Borrow up to $60,000 tax-free for a first home, then pay it back over 15 years</dd></div>
+        <div><dt>Deadline</dt><dd>60 days after year-end for the previous tax year</dd></div>
+        <div><dt>Must close by</dt><dd>End of the year you turn 71 (convert it to a RRIF or annuity)</dd></div>
+        <div><dt>Over-contribution</dt><dd>1% tax per month on anything over a $2,000 buffer</dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>Side by side</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>CELI</th><th>CELIAPP</th><th>RRSP</th></tr></thead>
+          <tbody>
+            <tr><td>Best for</td><td>Any goal, flexible savings</td><td>Your first home</td><td>Retirement, high income</td></tr>
+            <tr><td>Tax deduction</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Withdrawals</td><td>Tax-free, any time</td><td>Tax-free for a first home</td><td>Taxed</td></tr>
+            <tr><td>2026 limit</td><td>$7,000</td><td>$8,000 / yr, $40,000 total</td><td>18% of income, max $33,810</td></tr>
+            <tr><td>Room comes back?</td><td>Yes, next January 1</td><td>No</td><td>No</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <span class="hand">Good order for most people</span>
+      <ol class="reasons">
+        <li>An emergency fund (3 to 6 months of expenses) in a CELI.</li>
+        <li>Buying a first home? Open a CELIAPP now, even with $0, and fill it first.</li>
+        <li>Income over about $55,000? An RRSP deduction is worth more. Put your tax refund into your CELI.</li>
+        <li>Then keep filling your CELI for long-term, tax-free growth.</li>
+      </ol>
+    </section>
+  </div>
+
+  <!-- Admin: open this page with #admin -->
+  <section id="admin" class="card" hidden>
+    <h2>Leads saved in this browser</h2>
+    <p class="muted small" id="adminInfo"></p>
+    <div class="row"><button class="btn" id="copyCsv" type="button">Copy as CSV</button><button class="btn ghost" id="clearLeads" type="button">Delete all</button></div>
+    <p class="small" id="adminMsg" hidden></p>
+    <pre id="adminList"></pre>
+  </section>
+</main>
+
+<footer>
+  <p>General information about Canadian registered accounts for 2026. It's not financial, tax or legal advice. Check your exact room in CRA My Account and talk to a licensed advisor about your situation.</p>
+</footer>
+
+<script>
+/* ============ SETTINGS: edit these ============ */
+const CONFIG = {
+  // Paste your Google Apps Script web app URL here (see quiz/README.md).
+  // Leave it empty to save leads only in this browser (for testing; see #admin).
+  LEAD_ENDPOINT: "",
+};
+/* ============================================== */
+
+const QUESTIONS = [
+  { id: "age", q: "How old are you?", hint: "You need to be 18 to open a CELI or a CELIAPP.",
+    a: [
+      { v: "u18", t: "Under 18" },
+      { v: "18-39", t: "18 to 39" },
+      { v: "40-54", t: "40 to 54" },
+      { v: "55+", t: "55 or older" } ] },
+  { id: "home", q: "Have you lived in a home you owned this year or in the last 4 years?", hint: "This decides if you count as a first-time buyer.",
+    a: [
+      { v: "no", t: "No", s: "I rent, or I live with family" },
+      { v: "yes", t: "Yes", s: "I own, or recently owned, my home" } ] },
+  { id: "goal", q: "What's your main goal for this money?",
+    a: [
+      { v: "home", t: "Buy my first home" },
+      { v: "retire", t: "Retire comfortably" },
+      { v: "flex", t: "Emergency fund or flexible savings" },
+      { v: "unsure", t: "A bit of everything / not sure" } ] },
+  { id: "when", q: "When will you need the money?",
+    a: [
+      { v: "<2", t: "In less than 2 years" },
+      { v: "2-5", t: "In 2 to 5 years" },
+      { v: "5-15", t: "In 5 to 15 years" },
+      { v: "15+", t: "In more than 15 years" } ] },
+  { id: "income", q: "What's your yearly income before tax?", hint: "The higher it is, the more an RRSP or CELIAPP deduction saves you.",
+    a: [
+      { v: "low", t: "Under $55,000" },
+      { v: "mid", t: "$55,000 to $115,000" },
+      { v: "high", t: "Over $115,000" } ] },
+  { id: "celi", q: "Do you already have a CELI?",
+    a: [
+      { v: "full", t: "Yes, and it's full" },
+      { v: "room", t: "Yes, with room left" },
+      { v: "none", t: "No / not sure" } ] },
+];
+
+const NAMES = { celi: "CELI", celiapp: "CELIAPP", reer: "RRSP" };
+const SUMMARY = {
+  celi: "A CELI (TFSA) is your best first move. Your money grows tax-free and you can take it out any time.",
+  celiapp: "A CELIAPP (FHSA) is your best first move. You get a tax deduction going in and pay no tax coming out for your first home.",
+  reer: "An RRSP is your best first move. Your deduction cuts your taxes now, and your money grows tax-sheltered until retirement.",
+};
+
+let step = 0;
+const answers = {};
+let lastResult = null;
+const $ = (id) => document.getElementById(id);
+
+function score(a) {
+  const s = { celi: 0, celiapp: 0, reer: 0 };
+  const firstTime = a.home === "no";
+  ({ "18-39": () => { s.celiapp += 1; s.celi += 1; },
+     "40-54": () => { s.reer += 1; s.celi += 1; },
+     "55+":   () => { s.celi += 2; s.reer += 1; } }[a.age] || (() => {}))();
+  ({ home:   () => { s.celiapp += 4; s.celi += 1; s.reer += 1; },
+     retire: () => { s.reer += 3; s.celi += 2; },
+     flex:   () => { s.celi += 4; },
+     unsure: () => { s.celi += 2; s.reer += 1; s.celiapp += 1; } }[a.goal] || (() => {}))();
+  ({ "<2":   () => { s.celi += 2; },
+     "2-5":  () => { s.celiapp += 2; s.celi += 1; },
+     "5-15": () => { s.celiapp += 1; s.reer += 1; s.celi += 1; },
+     "15+":  () => { s.reer += 2; s.celi += 1; } }[a.when] || (() => {}))();
+  ({ low:  () => { s.celi += 2; },
+     mid:  () => { s.reer += 1; s.celiapp += 1; s.celi += 1; },
+     high: () => { s.reer += 3; s.celiapp += 1; } }[a.income] || (() => {}))();
+  ({ full: () => { s.reer += 1; s.celiapp += 1; s.celi -= 2; },
+     room: () => { s.celi += 1; },
+     none: () => { s.celi += 1; } }[a.celi] || (() => {}))();
+  if (!firstTime || a.age === "u18") s.celiapp = 0; // not eligible
+  if (firstTime && a.goal === "home" && a.age !== "u18") s.celiapp = Math.max(s.celiapp, s.celi + 1, s.reer + 1);
+  if (a.age === "u18") { s.celi = Math.max(s.celi, 1); s.reer = 0; }
+  Object.keys(s).forEach((k) => (s[k] = Math.max(0, s[k])));
+
+  const ranked = Object.keys(s).sort((x, y) => s[y] - s[x]);
+  const total = ranked.reduce((n, k) => n + s[k], 0) || 1;
+  const pct = Object.fromEntries(ranked.map((k) => [k, Math.round((s[k] / total) * 100)]));
+  return { top: ranked[0], second: ranked[1], ranked, pct, firstTime };
+}
+
+function reasons(a, r) {
+  const out = [];
+  const t = r.top;
+  if (t === "celiapp") {
+    out.push("You count as a first-time buyer, so you qualify for a CELIAPP.");
+    if (a.goal === "home") out.push("Your goal is your first home, which is exactly what the CELIAPP is built for: deductible in, tax-free out.");
+    out.push("Open it now, even with $0. Your $8,000 of yearly room only starts once the account is open.");
+    if (a.income !== "low") out.push("With your income, the deduction can give you a real tax refund. Put that refund back into your CELIAPP or CELI.");
+  }
+  if (t === "celi") {
+    if (a.goal === "flex" || a.when === "<2") out.push("You may need this money soon. A CELI lets you withdraw any time, tax-free, and get the room back next year.");
+    if (a.income === "low") out.push("With your income, an RRSP deduction saves less tax. Tax-free growth in a CELI is usually worth more.");
+    if (a.age === "55+") out.push("CELI withdrawals don't count as income, so they don't reduce government benefits like OAS or GIS.");
+    out.push("For 2026 you can put in $7,000, plus any unused room from past years.");
+  }
+  if (t === "reer") {
+    if (a.income === "high") out.push("You're in a high tax bracket, so each RRSP dollar can save you about 40% to 50% in tax.");
+    else out.push("Your income is high enough that an RRSP deduction pays off.");
+    if (a.goal === "retire" || a.when === "15+") out.push("Your money has a long time to grow tax-sheltered before you need it.");
+    if (a.celi === "full") out.push("Your CELI is already full, so the RRSP is the next account to fill.");
+    out.push("Your limit is 18% of last year's earned income, up to $33,810 for 2026.");
+  }
+  if (r.second && r.pct[r.second] > 0) out.push(`Next in line for you: the ${NAMES[r.second]}.`);
+  return out;
+}
+
+function noteFor(a, r) {
+  if (a.age === "u18") return "You can't open a CELI or a CELIAPP until you're 18. Your CELI room starts adding up the year you turn 18, so you'll have $7,000 waiting for you.";
+  if (a.goal === "home" && !r.firstTime) return "Because you've owned a home you lived in during the last 4 years, you don't qualify for the CELIAPP right now. A CELI is the most flexible way to save for your next home.";
+  if (r.top === "celiapp" && a.goal === "home") return "Tip: you can use the CELIAPP and the RRSP Home Buyers' Plan for the same home, up to $40,000 + $60,000.";
+  return "";
+}
+
+/* ---------- Rendering ---------- */
+function show(id) {
+  ["intro", "quiz", "lead", "result", "guide", "admin"].forEach((s) => ($(s).hidden = s !== id && !(id === "result" && s === "guide")));
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderQuestion() {
+  const Q = QUESTIONS[step];
+  $("qcount").textContent = `Question ${step + 1} of ${QUESTIONS.length}`;
+  $("bar").style.width = `${(step / QUESTIONS.length) * 100}%`;
+  $("qtext").textContent = Q.q;
+  $("qhint").textContent = Q.hint || "";
+  $("qhint").hidden = !Q.hint;
+  $("back").style.visibility = step === 0 ? "hidden" : "visible";
+  const box = $("options");
+  box.replaceChildren();
+  Q.a.forEach((opt) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "opt";
+    b.setAttribute("aria-pressed", String(answers[Q.id] === opt.v));
+    b.textContent = opt.t;
+    if (opt.s) { const sm = document.createElement("small"); sm.textContent = opt.s; b.append(sm); }
+    b.addEventListener("click", () => {
+      answers[Q.id] = opt.v;
+      b.setAttribute("aria-pressed", "true");
+      setTimeout(next, 180);
+    });
+    box.append(b);
+  });
+  box.querySelector("button")?.focus({ preventScroll: true });
+}
+
+function next() {
+  if (step < QUESTIONS.length - 1) { step++; renderQuestion(); }
+  else { $("bar").style.width = "100%"; lastResult = score(answers); show("lead"); $("fname").focus(); }
+}
+
+function renderResult(firstName) {
+  const r = lastResult;
+  $("rhello").textContent = firstName ? `${firstName}, your result` : "Your result";
+  $("rtitle").textContent = `Start with ${r.top === "reer" ? "an" : "a"} ${NAMES[r.top]}`;
+  $("rsummary").textContent = SUMMARY[r.top];
+  const bars = $("rbars");
+  bars.replaceChildren();
+  r.ranked.forEach((k) => {
+    const row = document.createElement("div");
+    row.className = "bar";
+    row.innerHTML = `<span></span><span class="track"><span class="fill"></span></span><span></span>`;
+    row.children[0].textContent = NAMES[k];
+    row.querySelector(".fill").style.width = `${r.pct[k]}%`;
+    row.children[2].textContent = `${r.pct[k]}%`;
+    bars.append(row);
+  });
+  const ul = $("rreasons");
+  ul.replaceChildren(...reasons(answers, r).map((t) => { const li = document.createElement("li"); li.textContent = t; return li; }));
+  const n = noteFor(answers, r);
+  $("rnote").replaceChildren();
+  if (n) { const d = document.createElement("div"); d.className = "note"; d.textContent = n; $("rnote").append(d); }
+  // Put the matching account first in the guide.
+  const guide = $("guide");
+  const order = r.ranked.map((k) => $("g-" + k));
+  order.reverse().forEach((el) => guide.insertBefore(el, guide.children[1]));
+  show("result");
+}
+
+/* ---------- Leads ---------- */
+const STORE = "quiz-leads";
+function localLeads() { try { return JSON.parse(localStorage.getItem(STORE) || "[]"); } catch { return []; } }
+function saveLocal(lead) { try { const l = localLeads(); l.push(lead); localStorage.setItem(STORE, JSON.stringify(l)); } catch {} }
+
+async function sendLead(lead) {
+  saveLocal(lead); // always keep a copy in this browser
+  if (!CONFIG.LEAD_ENDPOINT) return;
+  // text/plain + no-cors works with Google Apps Script without a CORS preflight.
+  await fetch(CONFIG.LEAD_ENDPOINT, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(lead) });
+}
+
+const params = new URLSearchParams(location.search);
+$("leadForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = $("formError");
+  const firstName = $("fname").value.trim();
+  const email = $("email").value.trim();
+  const phone = $("phone").value.trim();
+  let msg = "";
+  if (!firstName) msg = "Enter your first name.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) msg = "Enter a valid email, like name@example.com.";
+  else if (phone && phone.replace(/\D/g, "").length < 10) msg = "Enter a 10-digit phone number, or leave it empty.";
+  else if (!$("consent").checked) msg = "Check the box to receive your result by email.";
+  err.textContent = msg; err.hidden = !msg;
+  if (msg) return;
+
+  const r = lastResult;
+  const lead = {
+    date: new Date().toISOString(),
+    firstName, email, phone,
+    province: $("province").value,
+    wantsCall: $("call").checked ? "yes" : "no",
+    result: NAMES[r.top],
+    second: NAMES[r.second],
+    age: answers.age, ownedHome: answers.home, goal: answers.goal, timeline: answers.when, income: answers.income, hasCeli: answers.celi,
+    source: params.get("utm_source") || document.referrer || "direct",
+    campaign: params.get("utm_campaign") || "",
+  };
+  const btn = $("submit");
+  btn.disabled = true; btn.textContent = "Sending…";
+  try { await sendLead(lead); } catch (_) { /* the result still shows; a copy is saved locally */ }
+  btn.disabled = false; btn.textContent = "Show my result →";
+  renderResult(firstName);
+});
+
+/* ---------- Admin view (#admin) ---------- */
+function csv(rows) {
+  if (!rows.length) return "";
+  const keys = Object.keys(rows[0]);
+  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  return [keys.join(","), ...rows.map((r) => keys.map((k) => esc(r[k])).join(","))].join("\n");
+}
+function renderAdmin() {
+  const l = localLeads();
+  $("adminInfo").textContent = `${l.length} lead(s) in this browser. ` + (CONFIG.LEAD_ENDPOINT ? "Leads are also sent to your Google Sheet." : "No Google Sheet connected yet, so leads are only saved here.");
+  $("adminList").textContent = csv(l) || "No leads yet.";
+  show("admin");
+}
+$("copyCsv").addEventListener("click", () => {
+  const text = csv(localLeads());
+  const m = $("adminMsg");
+  navigator.clipboard.writeText(text).then(() => { m.textContent = "Copied."; m.hidden = false; })
+    .catch(() => { const r = document.createRange(); r.selectNodeContents($("adminList")); getSelection().removeAllRanges(); getSelection().addRange(r); m.textContent = "Selected. Press Ctrl+C or ⌘C to copy."; m.hidden = false; });
+});
+let armed = false;
+$("clearLeads").addEventListener("click", (e) => {
+  if (!armed) { armed = true; e.target.textContent = "Click again to delete"; return; }
+  try { localStorage.removeItem(STORE); } catch {}
+  armed = false; e.target.textContent = "Delete all"; renderAdmin();
+});
+
+/* ---------- Wiring ---------- */
+$("start").addEventListener("click", () => { step = 0; show("quiz"); renderQuestion(); });
+$("back").addEventListener("click", () => { if (step > 0) { step--; renderQuestion(); } });
+$("restart").addEventListener("click", () => { Object.keys(answers).forEach((k) => delete answers[k]); step = 0; show("quiz"); renderQuestion(); });
+if (location.hash === "#admin") renderAdmin();
+window.addEventListener("hashchange", () => { if (location.hash === "#admin") renderAdmin(); });
+</script>
+</body>
+</html>

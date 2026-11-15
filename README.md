@@ -33,6 +33,10 @@ While you sleep, fluid washes through your brain and *clears out waste*. {drop}
 
 Everything runs locally in the browser. Files are never uploaded anywhere.
 
+## Lead quiz
+
+`quiz/` has a 1-minute lead quiz: "CELI, CELIAPP or RRSP: which one is right for you?" It collects name, email and answers, shows a personalized result and the full guide with the example videos, and sends leads to a Google Sheet. Setup: [quiz/README.md](quiz/README.md).
+
 ## Run it
 
 It's a static page with no build step:
