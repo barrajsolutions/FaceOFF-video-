@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Albarraj Financial Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Readex+Pro:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: language bar on top, then one of two working panels (age, investment), inputs beside results on wide screens */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --ink:#17241f; --muted:#5d6b65; --line:#dbe2dd;
+  --accent:#1f7a55; --accent-soft:#d9eee3; --gold:#b9852b; --gold-soft:#f4e8d2; --on-accent:#ffffff;
+  --display:"Readex Pro","IBM Plex Sans Arabic","Noto Sans SC","PingFang SC","Microsoft YaHei",Tahoma,sans-serif;
+  --body:"IBM Plex Sans Arabic","Noto Sans SC","PingFang SC","Microsoft YaHei",Tahoma,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101714; --surface:#17211d; --ink:#e7eee9; --muted:#9aa9a2; --line:#2a3832;
+  --accent:#4fc28e; --accent-soft:#1d3a2d; --gold:#e0b25e; --gold-soft:#3a2f1b; --on-accent:#0c1a13; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101714; --surface:#17211d; --ink:#e7eee9; --muted:#9aa9a2; --line:#2a3832;
+  --accent:#4fc28e; --accent-soft:#1d3a2d; --gold:#e0b25e; --gold-soft:#3a2f1b; --on-accent:#0c1a13; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+header{min-width:0;flex:1 1 320px}
+header h1{font-family:var(--display);font-size:clamp(26px,5vw,38px);margin:0;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+
+.brand{display:flex;align-items:center;gap:14px;padding-block:4px 18px;border-bottom:1px solid var(--line)}
+.mono{flex:none;width:52px;height:52px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font:700 19px var(--display);letter-spacing:.04em}
+.brand .who{min-width:0}
+.brand .nm{font:700 clamp(19px,3.4vw,24px)/1.2 var(--display);letter-spacing:-.005em}
+.brand .tt{color:var(--gold);font-weight:600;font-size:13.5px;letter-spacing:.03em;text-transform:uppercase}
+.cta{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:600;padding:11px 18px;border-radius:10px}
+.cta:hover{opacity:.9}
+.book{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;scroll-margin-top:16px}
+.bookgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:760px){.bookgrid{grid-template-columns:minmax(0,1fr)}}
+.book form{display:flex;flex-direction:column;gap:14px;min-width:0}
+.book h2{font-family:var(--display);font-size:clamp(20px,3.5vw,26px);margin:0;text-wrap:balance}
+.book h3{font-family:var(--display);font-size:16px;margin:0}
+.book p{margin:0;color:var(--muted)}
+.book textarea{resize:vertical;min-height:90px;line-height:1.5}
+.btn[disabled]{opacity:.6;cursor:wait}
+.btn{font:600 15px var(--body);border:0;border-radius:10px;padding:12px 18px;background:var(--accent);color:var(--on-accent);cursor:pointer;align-self:flex-start}
+.btn.alt{background:var(--ink);color:var(--bg)}
+.err{color:#c0392b;font-size:13.5px;margin:0}
+.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.box{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.box .ct{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;user-select:all;overflow-wrap:anywhere}
+.box textarea{background:var(--surface);min-height:220px;font-size:14px}
+.prods{border:1px solid var(--line);border-radius:10px;padding:12px 14px 14px;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px 16px;min-width:0}
+.prods legend{font-weight:500;font-size:14px;padding-inline:4px}
+.prods legend small{color:var(--muted);font-weight:400}
+label.chk{flex-direction:row;align-items:center;gap:10px;font-weight:500;cursor:pointer}
+label.chk input{width:20px;height:20px;padding:0;flex:none;accent-color:var(--accent)}
+.req{color:var(--gold)}
+.copyrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.copyrow span{font-size:13.5px;color:var(--accent);font-weight:600}
+.foot{border-top:1px solid var(--line);padding-top:18px;display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.foot b{color:var(--ink)}
+.langs{display:flex;gap:4px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
+.langs button{font:600 13.5px var(--body);border:0;background:transparent;color:var(--muted);padding:7px 11px;border-radius:8px;cursor:pointer;display:flex;gap:6px;align-items:center}
+.langs button b{font-size:11px;letter-spacing:.06em;opacity:.75}
+.langs button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+.tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:5px;width:fit-content;max-width:100%}
+.tabs button{font:600 15px var(--body);border:0;background:transparent;color:var(--muted);padding:9px 18px;border-radius:8px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--on-accent)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+.panel{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.panel{grid-template-columns:minmax(0,1fr)}}
+.inputs{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.inputs h2{font-family:var(--display);font-size:18px;margin:0}
+label{display:flex;flex-direction:column;gap:5px;font-weight:500;font-size:14px}
+label small{color:var(--muted);font-weight:400}
+input,select,textarea{font:500 16px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px;width:100%;font-variant-numeric:tabular-nums}
+input[type=range]{padding:0;accent-color:var(--accent);background:transparent;border:0}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pctrow{display:flex;align-items:center;gap:10px}
+.pctrow input[type=number]{width:90px;flex:none}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+
+.results{display:flex;flex-direction:column;gap:16px;min-width:0}
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
+.hero .lbl{font-size:13px;color:var(--muted);letter-spacing:.02em}
+.big{font-family:var(--display);font-weight:700;font-size:clamp(30px,6vw,46px);line-height:1.15;font-variant-numeric:tabular-nums;color:var(--accent);overflow-wrap:anywhere}
+.big .unit{font-size:.45em;color:var(--ink);font-weight:500;margin-inline-start:6px}
+.sub{color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{padding:14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);min-width:0}
+.stat .v{font-family:var(--display);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stat .k{font-size:12.5px;color:var(--muted)}
+.bday{background:var(--gold-soft);border-color:transparent}
+.bday .v{color:var(--gold)}
+.gain{color:var(--accent)}
+
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.chart h3{margin:0 0 8px;font-family:var(--display);font-size:16px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:middle}
+svg{width:100%;height:auto;display:block}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+th,td{padding:9px 14px;text-align:start;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:12.5px}
+tr:last-child td{border-bottom:0}
+td.g{color:var(--accent);font-weight:600}
+.link{background:var(--accent-soft);border-radius:12px;padding:14px 16px;font-size:14px}
+.link b{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+
+<div class="wrap" id="app">
+  <div class="brand">
+    <div class="mono" aria-hidden="true" dir="ltr">MA</div>
+    <div class="who">
+      <div class="nm" dir="ltr">Mohamad Albarraj</div>
+      <div class="tt" data-i="advisor"></div>
+    </div>
+  </div>
+  <div class="top">
+    <header>
+      <h1 data-i="title"></h1>
+      <p data-i="intro"></p>
+    </header>
+    <div class="langs" role="group" aria-label="Language / Langue / Idioma / اللغة" id="langs"></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-age" aria-selected="true" aria-controls="p-age" data-i="tabAge"></button>
+    <button role="tab" id="tab-inv" aria-selected="false" aria-controls="p-inv" data-i="tabInv"></button>
+  </div>
+
+  <!-- AGE -->
+  <section class="panel" id="p-age" role="tabpanel" aria-labelledby="tab-age">
+    <div class="inputs">
+      <h2 data-i="dobTitle"></h2>
+      <label><span data-i="dobLabel"></span>
+        <input type="date" id="dob" value="1998-04-12">
+      </label>
+      <p class="note" data-i="dobNote"></p>
+    </div>
+    <div class="results">
+      <div class="hero">
+        <div class="lbl" data-i="ageToday"></div>
+        <div class="big" id="ageMain">—</div>
+        <div class="sub" id="ageExact"></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="v" id="sMonths">—</div><div class="k" data-i="months"></div></div>
+        <div class="stat"><div class="v" id="sWeeks">—</div><div class="k" data-i="weeks"></div></div>
+        <div class="stat"><div class="v" id="sDays">—</div><div class="k" data-i="days"></div></div>
+        <div class="stat"><div class="v" id="sHours">—</div><div class="k" data-i="hours"></div></div>
+        <div class="stat bday"><div class="v" id="sNext">—</div><div class="k" id="sNextK"></div></div>
+        <div class="stat"><div class="v" id="sWeekday">—</div><div class="k" data-i="bornOn"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INVESTMENT -->
+  <section class="panel" id="p-inv" role="tabpanel" aria-labelledby="tab-inv" hidden>
+    <div class="inputs">
+      <h2 data-i="invTitle"></h2>
+      <div class="row">
+        <label><span data-i="principal"></span>
+          <input type="number" id="principal" min="0" step="100" value="10000">
+        </label>
+        <label><span data-i="currency"></span>
+          <select id="cur">
+            <option value="CAD">CAD $</option>
+            <option value="USD">USD $</option>
+            <option value="EUR">EUR €</option>
+            <option value="AED">AED د.إ</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <label><span><span data-i="monthly"></span> <small data-i="optional"></small></span>
+          <input type="number" id="monthly" min="0" step="10" value="200">
+        </label>
+        <label><span data-i="freqLabel"></span>
+          <select id="freq">
+            <option value="52" data-i="fW"></option>
+            <option value="26" data-i="fB"></option>
+            <option value="12" data-i="fM" selected></option>
+            <option value="1" data-i="fY"></option>
+          </select>
+        </label>
+      </div>
+      <p class="note" id="perYear" style="margin-top:-6px"></p>
+      <label><span data-i="rate"></span>
+        <div class="pctrow">
+          <input type="number" id="rateN" min="0" max="50" step="0.1" value="8">
+          <input type="range" id="rateR" min="0" max="30" step="0.5" value="8">
+        </div>
+      </label>
+      <label><span data-i="years"></span>
+        <div class="pctrow">
+          <input type="number" id="yearsN" min="1" max="60" step="1" value="20">
+          <input type="range" id="yearsR" min="1" max="50" step="1" value="20">
+        </div>
+      </label>
+      <label><span data-i="compLabel"></span>
+        <select id="comp">
+          <option value="12" data-i="compM"></option>
+          <option value="1" data-i="compY"></option>
+          <option value="0" data-i="compS"></option>
+        </select>
+      </label>
+      <p class="note" data-i="disclaimer"></p>
+    </div>
+    <div class="results">
+      <div class="hero">
+        <div class="lbl" id="afterLbl"></div>
+        <div class="big" id="finalV">—</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="v" id="paidV">—</div><div class="k" data-i="paid"></div></div>
+        <div class="stat"><div class="v gain" id="gainV">—</div><div class="k" data-i="gain"></div></div>
+        <div class="stat"><div class="v" id="multV">—</div><div class="k" data-i="mult"></div></div>
+      </div>
+      <div class="link" id="ageLink"></div>
+      <a class="cta" href="#book"><span data-i="ctaBook"></span> <span aria-hidden="true" class="arr">↓</span></a>
+      <div class="chart">
+        <h3 data-i="chartTitle"></h3>
+        <div class="legend"><span><i style="background:var(--gold)"></i><span data-i="paid"></span></span><span><i style="background:var(--accent)"></i><span data-i="gain"></span></span></div>
+        <svg id="chart" viewBox="0 0 600 260" role="img"></svg>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th data-i="thYear"></th><th data-i="thAge"></th><th data-i="paid"></th><th data-i="gain"></th><th data-i="thTotal"></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="book" id="book" aria-labelledby="bookH">
+    <div class="bookgrid">
+      <form id="bookForm" novalidate>
+        <h2 id="bookH" data-i="bookTitle"></h2>
+        <p data-i="bookIntro"></p>
+        <label><span data-i="fName"></span>
+          <input type="text" id="bName" autocomplete="name">
+        </label>
+        <div class="row">
+          <label><span><span data-i="fPhone"></span> <span class="req">*</span></span>
+            <input type="tel" id="bPhone" autocomplete="tel" inputmode="tel" dir="ltr" required>
+          </label>
+          <label><span><span data-i="fEmail"></span> <span class="req">*</span></span>
+            <input type="email" id="bEmail" autocomplete="email" inputmode="email" dir="ltr" required>
+          </label>
+        </div>
+        <fieldset class="prods" id="bProds">
+          <legend><span data-i="fProducts"></span> <small data-i="fProductsHint"></small></legend>
+          <label class="chk"><input type="checkbox" value="CELI"><span data-i="p1"></span></label>
+          <label class="chk"><input type="checkbox" value="REER"><span data-i="p2"></span></label>
+          <label class="chk"><input type="checkbox" value="REEE"><span data-i="p3"></span></label>
+          <label class="chk"><input type="checkbox" value="CELIAPP"><span data-i="p4"></span></label>
+          <label class="chk"><input type="checkbox" value="Assurance vie avec participation"><span data-i="p5"></span></label>
+          <label class="chk"><input type="checkbox" value="Assurance vie universelle"><span data-i="p6"></span></label>
+          <label class="chk"><input type="checkbox" value="Non enregistré"><span data-i="p7"></span></label>
+          <label class="chk"><input type="checkbox" value="Autre"><span data-i="p8"></span></label>
+        </fieldset>
+        <label><span data-i="fWhen"></span>
+          <select id="bWhen">
+            <option value="any" data-i="wAny"></option>
+            <option value="am" data-i="wMorning"></option>
+            <option value="pm" data-i="wAfternoon"></option>
+            <option value="eve" data-i="wEvening"></option>
+          </select>
+        </label>
+        <label><span data-i="fNotes"></span>
+          <textarea id="bNotes" rows="3"></textarea>
+        </label>
+        <p class="err" id="bErr" data-i="needName" hidden></p>
+        <button type="submit" class="btn" id="bSubmit" data-i="bookBtn"></button>
+      </form>
+      <div class="side">
+        <div class="box" id="contactBox" hidden>
+          <h3 data-i="contactTitle"></h3>
+          <div class="ct" id="cPhone" dir="ltr" hidden></div>
+          <div class="ct" id="cEmail" dir="ltr" hidden></div>
+          <a class="btn alt" id="cBook" target="_blank" rel="noopener" data-i="bookOnline" hidden></a>
+        </div>
+        <div class="box" id="sentBox" role="status" hidden>
+          <h3 data-i="sentTitle"></h3>
+          <p data-i="sentText"></p>
+        </div>
+        <p class="err" id="sendErr" data-i="sendFail" hidden></p>
+        <div class="box" id="msgBox" hidden>
+          <h3 data-i="msgTitle"></h3>
+          <p data-i="msgHint"></p>
+          <textarea id="bMsg" readonly rows="10"></textarea>
+          <div class="copyrow"><a class="btn alt" id="bMail" data-i="sendEmail" hidden></a><button type="button" class="btn" id="bCopy" data-i="copyBtn"></button><span id="bCopyS" role="status"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div><span data-i="offeredBy"></span> <b dir="ltr">Mohamad Albarraj</b>, <span data-i="advisor"></span></div>
+    <div data-i="legal"></div>
+  </footer>
+</div>
+
+<script>
+const LANGS = {
+  en:{name:'English',locale:'en-CA',dir:'ltr',
+    advisor:'Financial Security Advisor',offeredBy:'Calculator offered by',
+    legal:'For information only. These results are estimates and do not replace a personalized meeting with your advisor.',
+    title:'Age & Invest',
+    intro:'Find out exactly how old you are, and see how much your money grows at an annual return rate you choose.',
+    tabAge:'How old am I',tabInv:'Investing',
+    dobTitle:'Date of birth',dobLabel:'Your date of birth',dobNote:'Filled with an example. Change the date and the results update right away.',
+    ageToday:'Your age today',yearsU:'years',
+    exact:(y,m,d)=>`${y} years, ${m} months and ${d} days`,
+    badDob:'Enter a valid date of birth (not in the future).',
+    months:'months',weeks:'weeks',days:'days',hours:'hours (approx.)',
+    daysLeft:n=>`${n} days`,untilTurn:n=>`until you turn ${n}`,today:'Today! 🎂',hbd:'Happy birthday',
+    bornOn:'the weekday you were born',
+    invTitle:'Investment details',principal:'Starting amount',currency:'Currency',monthly:'Regular contribution',optional:'(optional)',freqLabel:'How often',fW:'Weekly',fB:'Every 2 weeks',fM:'Monthly',fY:'Yearly',perYear:v=>`That is ${v} per year.`,
+    rate:'Annual return rate (%)',years:'Number of years',compLabel:'How the return is calculated',
+    compM:'Compounded monthly',compY:'Compounded yearly',compS:'Simple (no compounding)',
+    disclaimer:'This is an estimate. Real returns change from year to year and are not guaranteed.',
+    after:n=>`You will have after ${n} years`,paid:'Total you put in',gain:'Earnings from returns',mult:'Growth multiple',
+    linkYes:(a,v,b)=>`If you start today at age <b>${a}</b>, you reach <b>${v}</b> at age <b>${b}</b>.`,
+    linkNo:'Add your date of birth in "How old am I" to see how old you will be when you collect the money.',
+    chartTitle:'Growth year by year',chartAria:'Investment growth chart',thYear:'Year',thAge:'Your age',thTotal:'Total'},
+  fr:{name:'Français',locale:'fr-CA',dir:'ltr',
+    advisor:'Conseiller en sécurité financière',offeredBy:'Calculatrice offerte par',
+    legal:'À titre informatif seulement. Ces résultats sont des estimations et ne remplacent pas une rencontre personnalisée avec votre conseiller.',
+    title:'Âge et placement',
+    intro:'Découvrez votre âge exact et voyez combien votre argent peut fructifier selon le taux de rendement annuel de votre choix.',
+    tabAge:'Quel âge ai-je',tabInv:'Placement',
+    dobTitle:'Date de naissance',dobLabel:'Votre date de naissance',dobNote:'Exemple prérempli. Modifiez la date et les résultats se mettent à jour aussitôt.',
+    ageToday:'Votre âge aujourd’hui',yearsU:'ans',
+    exact:(y,m,d)=>`${y} ans, ${m} mois et ${d} jours`,
+    badDob:'Entrez une date de naissance valide (pas dans le futur).',
+    months:'mois',weeks:'semaines',days:'jours',hours:'heures (environ)',
+    daysLeft:n=>`${n} jours`,untilTurn:n=>`avant vos ${n} ans`,today:'Aujourd’hui ! 🎂',hbd:'Bonne fête',
+    bornOn:'le jour de la semaine de votre naissance',
+    invTitle:'Détails du placement',principal:'Montant de départ',currency:'Devise',monthly:'Cotisation régulière',optional:'(facultatif)',freqLabel:'Fréquence',fW:'Toutes les semaines',fB:'Toutes les deux semaines',fM:'Une fois par mois',fY:'Une fois par année',perYear:v=>`Soit ${v} par année.`,
+    rate:'Taux de rendement annuel (%)',years:'Nombre d’années',compLabel:'Calcul du rendement',
+    compM:'Composé mensuellement',compY:'Composé annuellement',compS:'Simple (sans capitalisation)',
+    disclaimer:'Ceci est une estimation. Le rendement réel varie d’une année à l’autre et n’est pas garanti.',
+    after:n=>`Vous aurez après ${n} ans`,paid:'Total versé',gain:'Gains du rendement',mult:'Multiplicateur',
+    linkYes:(a,v,b)=>`Si vous commencez aujourd’hui à <b>${a}</b> ans, vous atteindrez <b>${v}</b> à <b>${b}</b> ans.`,
+    linkNo:'Ajoutez votre date de naissance dans « Quel âge ai-je » pour voir votre âge au moment de toucher l’argent.',
+    chartTitle:'Croissance année par année',chartAria:'Graphique de croissance du placement',thYear:'Année',thAge:'Votre âge',thTotal:'Total'},
+  es:{name:'Español',locale:'es-MX',dir:'ltr',
+    advisor:'Asesor en seguridad financiera',offeredBy:'Calculadora ofrecida por',
+    legal:'Solo con fines informativos. Estos resultados son estimaciones y no reemplazan una reunión personalizada con tu asesor.',
+    title:'Edad e inversión',
+    intro:'Descubre tu edad exacta y mira cuánto crece tu dinero con la tasa de rendimiento anual que elijas.',
+    tabAge:'¿Cuántos años tengo?',tabInv:'Inversión',
+    dobTitle:'Fecha de nacimiento',dobLabel:'Tu fecha de nacimiento',dobNote:'Con un ejemplo. Cambia la fecha y los resultados se actualizan al instante.',
+    ageToday:'Tu edad hoy',yearsU:'años',
+    exact:(y,m,d)=>`${y} años, ${m} meses y ${d} días`,
+    badDob:'Ingresa una fecha de nacimiento válida (no en el futuro).',
+    months:'meses',weeks:'semanas',days:'días',hours:'horas (aprox.)',
+    daysLeft:n=>`${n} días`,untilTurn:n=>`para cumplir ${n}`,today:'¡Hoy! 🎂',hbd:'Feliz cumpleaños',
+    bornOn:'el día de la semana en que naciste',
+    invTitle:'Detalles de la inversión',principal:'Monto inicial',currency:'Moneda',monthly:'Aporte periódico',optional:'(opcional)',freqLabel:'Frecuencia',fW:'Semanal',fB:'Cada dos semanas',fM:'Mensual',fY:'Anual',perYear:v=>`Es decir, ${v} al año.`,
+    rate:'Tasa de rendimiento anual (%)',years:'Número de años',compLabel:'Cómo se calcula el rendimiento',
+    compM:'Compuesto mensual',compY:'Compuesto anual',compS:'Simple (sin capitalizar)',
+    disclaimer:'Es una estimación. El rendimiento real cambia cada año y no está garantizado.',
+    after:n=>`Tendrás después de ${n} años`,paid:'Total aportado',gain:'Ganancia por rendimiento',mult:'Multiplicador',
+    linkYes:(a,v,b)=>`Si empiezas hoy con <b>${a}</b> años, llegarás a <b>${v}</b> a los <b>${b}</b> años.`,
+    linkNo:'Agrega tu fecha de nacimiento en «¿Cuántos años tengo?» para ver qué edad tendrás al cobrar el dinero.',
+    chartTitle:'Crecimiento año por año',chartAria:'Gráfico de crecimiento de la inversión',thYear:'Año',thAge:'Tu edad',thTotal:'Total'},
+  ar:{name:'العربية',locale:'ar-LB',dir:'rtl',
+    advisor:'مستشار في الأمان المالي',offeredBy:'حاسبة مقدّمة من',
+    legal:'للمعلومات فقط. هذه النتائج تقديرية ولا تُغني عن لقاء شخصي مع مستشارك.',
+    title:'العمر والاستثمار',
+    intro:'احسب عمرك بالضبط، وشوف كم يصير مالك إذا استثمرته بنسبة مردود سنوية تختارها.',
+    tabAge:'كم عمري',tabInv:'الاستثمار',
+    dobTitle:'تاريخ الميلاد',dobLabel:'تاريخ ميلادك',dobNote:'مثال معبّأ مسبقاً. غيّر التاريخ وتتحدّث النتائج فوراً.',
+    ageToday:'عمرك اليوم',yearsU:'سنة',
+    exact:(y,m,d)=>`${y} سنة، ${m} شهر و${d} يوم`,
+    badDob:'أدخل تاريخ ميلاد صحيح (ليس في المستقبل).',
+    months:'شهر',weeks:'أسبوع',days:'يوم',hours:'ساعة تقريباً',
+    daysLeft:n=>`${n} يوم`,untilTurn:n=>`لتُكمل ${n} سنة`,today:'اليوم! 🎂',hbd:'عيد ميلاد سعيد',
+    bornOn:'يوم الأسبوع الذي وُلدت فيه',
+    invTitle:'تفاصيل الاستثمار',principal:'المبلغ الأولي',currency:'العملة',monthly:'إضافة دورية',optional:'(اختياري)',freqLabel:'التكرار',fW:'أسبوعياً',fB:'كل أسبوعين',fM:'شهرياً',fY:'سنوياً',perYear:v=>`أي ${v} في السنة.`,
+    rate:'نسبة المردود السنوية (%)',years:'عدد السنين',compLabel:'طريقة حساب المردود',
+    compM:'مركّب شهرياً',compY:'مركّب سنوياً',compS:'بسيط (بدون تركيب)',
+    disclaimer:'هذه حسبة تقديرية. المردود الحقيقي يتغيّر من سنة لأخرى وغير مضمون.',
+    after:n=>`سيصبح معك بعد ${n} سنة`,paid:'مجموع ما دفعته',gain:'الربح من المردود',mult:'مضاعفة المبلغ',
+    linkYes:(a,v,b)=>`إذا بدأت اليوم وعمرك <b>${a}</b> سنة، تصل إلى <b>${v}</b> وعمرك <b>${b}</b> سنة.`,
+    linkNo:'أضف تاريخ ميلادك في قسم «كم عمري» لنخبرك كم سيكون عمرك عند استلام المبلغ.',
+    chartTitle:'نمو المبلغ سنة بسنة',chartAria:'رسم بياني لنمو الاستثمار',thYear:'السنة',thAge:'عمرك',thTotal:'المجموع'},
+  zh:{name:'中文',locale:'zh-CN',dir:'ltr',
+    advisor:'财务安全顾问',offeredBy:'计算器提供者：',
+    legal:'仅供参考。以上结果为估算，不能代替与您的顾问进行的个人咨询。',
+    title:'年龄与投资',
+    intro:'精确计算您的年龄，并查看在您选择的年回报率下，您的资金能增长多少。',
+    tabAge:'我几岁了',tabInv:'投资',
+    dobTitle:'出生日期',dobLabel:'您的出生日期',dobNote:'已填入示例。修改日期后结果会立即更新。',
+    ageToday:'您今天的年龄',yearsU:'岁',
+    exact:(y,m,d)=>`${y} 岁 ${m} 个月 ${d} 天`,
+    badDob:'请输入有效的出生日期（不能是未来的日期）。',
+    months:'个月',weeks:'周',days:'天',hours:'小时（约）',
+    daysLeft:n=>`${n} 天`,untilTurn:n=>`到您 ${n} 岁生日`,today:'就是今天！🎂',hbd:'生日快乐',
+    bornOn:'您出生那天是星期几',
+    invTitle:'投资详情',principal:'初始金额',currency:'货币',monthly:'定期追加',optional:'（可选）',freqLabel:'频率',fW:'每周',fB:'每两周',fM:'每月',fY:'每年',perYear:v=>`即每年 ${v}。`,
+    rate:'年回报率 (%)',years:'年数',compLabel:'回报计算方式',
+    compM:'按月复利',compY:'按年复利',compS:'单利（不计复利）',
+    disclaimer:'此为估算。实际回报每年都会变化，且不保证。',
+    after:n=>`${n} 年后您将拥有`,paid:'累计投入',gain:'回报收益',mult:'增长倍数',
+    linkYes:(a,v,b)=>`如果您今天 <b>${a}</b> 岁开始投资，到 <b>${b}</b> 岁时将达到 <b>${v}</b>。`,
+    linkNo:'在“我几岁了”中填写出生日期，即可看到您领取这笔钱时的年龄。',
+    chartTitle:'逐年增长',chartAria:'投资增长图表',thYear:'年份',thAge:'您的年龄',thTotal:'总额'}
+};
+const BOOK = {
+  en:{bookTitle:'Book a call with Mohamad',bookIntro:'Want to talk about your situation? Leave your details and a good time to reach you. Your calculator results are added to the message automatically.',
+    fName:'Your name',fContact:'Phone or email',fWhen:'Best time to reach you',wAny:'Any time',wMorning:'Morning',wAfternoon:'Afternoon',wEvening:'Evening',fNotes:'What would you like to discuss?',
+    bookBtn:'Prepare my request',msgTitle:'Your request is ready',msgHint:'Copy it and send it to Mohamad by text or email.',copyBtn:'Copy message',copied:'Copied',copyFail:'Select the text and copy it manually.',
+    contactTitle:'Reach Mohamad',bookOnline:'Book online',needName:'Enter your name and a phone number or email.',ctaBook:'Discuss these results with Mohamad',
+    msgHello:'Hello Mohamad,',msgWant:'I would like to book a call to discuss my situation.',msgName:'Name',msgContact:'Contact',msgWhen:'Best time',msgNotes:'Notes',msgScenario:'My calculator scenario'},
+  fr:{bookTitle:'Réserver un appel avec Mohamad',bookIntro:'Vous voulez parler de votre situation? Laissez vos coordonnées et un moment qui vous convient. Les résultats de la calculatrice sont ajoutés au message automatiquement.',
+    fName:'Votre nom',fContact:'Téléphone ou courriel',fWhen:'Meilleur moment pour vous joindre',wAny:'N’importe quand',wMorning:'Matin',wAfternoon:'Après-midi',wEvening:'Soir',fNotes:'De quoi aimeriez-vous discuter?',
+    bookBtn:'Préparer ma demande',msgTitle:'Votre demande est prête',msgHint:'Copiez-la et envoyez-la à Mohamad par texto ou par courriel.',copyBtn:'Copier le message',copied:'Copié',copyFail:'Sélectionnez le texte et copiez-le manuellement.',
+    contactTitle:'Joindre Mohamad',bookOnline:'Réserver en ligne',needName:'Entrez votre nom et un numéro de téléphone ou un courriel.',ctaBook:'Discuter de ces résultats avec Mohamad',
+    msgHello:'Bonjour Mohamad,',msgWant:'J’aimerais réserver un appel pour discuter de ma situation.',msgName:'Nom',msgContact:'Coordonnées',msgWhen:'Meilleur moment',msgNotes:'Notes',msgScenario:'Mon scénario de la calculatrice'},
+  es:{bookTitle:'Reserva una llamada con Mohamad',bookIntro:'¿Quieres hablar de tu situación? Deja tus datos y un horario que te convenga. Los resultados de la calculadora se agregan al mensaje automáticamente.',
+    fName:'Tu nombre',fContact:'Teléfono o correo',fWhen:'Mejor momento para contactarte',wAny:'Cualquier momento',wMorning:'Mañana',wAfternoon:'Tarde',wEvening:'Noche',fNotes:'¿De qué te gustaría hablar?',
+    bookBtn:'Preparar mi solicitud',msgTitle:'Tu solicitud está lista',msgHint:'Cópiala y envíasela a Mohamad por mensaje o correo.',copyBtn:'Copiar mensaje',copied:'Copiado',copyFail:'Selecciona el texto y cópialo manualmente.',
+    contactTitle:'Contactar a Mohamad',bookOnline:'Reservar en línea',needName:'Escribe tu nombre y un teléfono o correo.',ctaBook:'Hablar de estos resultados con Mohamad',
+    msgHello:'Hola Mohamad:',msgWant:'Me gustaría reservar una llamada para hablar de mi situación.',msgName:'Nombre',msgContact:'Contacto',msgWhen:'Mejor momento',msgNotes:'Notas',msgScenario:'Mi escenario de la calculadora'},
+  ar:{bookTitle:'احجز مكالمة مع محمد',bookIntro:'تريد أن تتحدث عن وضعك؟ اترك معلوماتك والوقت المناسب لك. تُضاف نتائج الحاسبة إلى الرسالة تلقائياً.',
+    fName:'اسمك',fContact:'الهاتف أو البريد الإلكتروني',fWhen:'أفضل وقت للتواصل معك',wAny:'أي وقت',wMorning:'صباحاً',wAfternoon:'بعد الظهر',wEvening:'مساءً',fNotes:'ماذا تريد أن تناقش؟',
+    bookBtn:'جهّز طلبي',msgTitle:'طلبك جاهز',msgHint:'انسخه وأرسله إلى محمد برسالة نصية أو بالبريد الإلكتروني.',copyBtn:'انسخ الرسالة',copied:'تم النسخ',copyFail:'حدّد النص وانسخه يدوياً.',
+    contactTitle:'تواصل مع محمد',bookOnline:'احجز عبر الإنترنت',needName:'أدخل اسمك ورقم هاتف أو بريداً إلكترونياً.',ctaBook:'ناقش هذه النتائج مع محمد',
+    msgHello:'مرحباً محمد،',msgWant:'أودّ حجز مكالمة لمناقشة وضعي.',msgName:'الاسم',msgContact:'التواصل',msgWhen:'أفضل وقت',msgNotes:'ملاحظات',msgScenario:'السيناريو من الحاسبة'},
+  zh:{bookTitle:'预约与 Mohamad 通话',bookIntro:'想聊聊您的情况吗？留下您的联系方式和方便的时间。计算器结果会自动加入消息中。',
+    fName:'您的姓名',fContact:'电话或电子邮件',fWhen:'方便联系的时间',wAny:'任何时间',wMorning:'上午',wAfternoon:'下午',wEvening:'晚上',fNotes:'您想讨论什么？',
+    bookBtn:'生成我的预约请求',msgTitle:'您的请求已准备好',msgHint:'复制后通过短信或电子邮件发送给 Mohamad。',copyBtn:'复制消息',copied:'已复制',copyFail:'请选中文本并手动复制。',
+    contactTitle:'联系 Mohamad',bookOnline:'在线预约',needName:'请输入您的姓名以及电话或电子邮件。',ctaBook:'与 Mohamad 讨论这些结果',
+    msgHello:'Mohamad 您好，',msgWant:'我想预约一次通话，讨论我的情况。',msgName:'姓名',msgContact:'联系方式',msgWhen:'方便的时间',msgNotes:'备注',msgScenario:'我的计算器方案'}
+};
+Object.keys(BOOK).forEach(k => Object.assign(LANGS[k], BOOK[k]));
+const BOOK2 = {
+  en:{fPhone:'Phone',fEmail:'Email',fProducts:'Products you are interested in',fProductsHint:'(check all that apply)',
+    p1:'TFSA',p2:'RRSP',p3:'RESP',p4:'FHSA',p5:'Participating whole life insurance',p6:'Universal life insurance',p7:'Non-registered',p8:'Other',
+    needName:'Enter your name, a phone number and a valid email address.',msgPhone:'Phone',msgEmail:'Email',msgProducts:'Products',
+    msgHint:'Send it to Mohamad by email, or copy it and send it by text.',sendEmail:'Send by email',emailSubject:'Call request'},
+  fr:{fPhone:'Téléphone',fEmail:'Courriel',fProducts:'Produits qui vous intéressent',fProductsHint:'(cochez tout ce qui s’applique)',
+    p1:'CELI',p2:'REER',p3:'REEE',p4:'CELIAPP',p5:'Assurance vie avec participation',p6:'Assurance vie universelle',p7:'Non enregistré',p8:'Autre',
+    needName:'Entrez votre nom, un numéro de téléphone et un courriel valide.',msgPhone:'Téléphone',msgEmail:'Courriel',msgProducts:'Produits',
+    msgHint:'Envoyez-la à Mohamad par courriel, ou copiez-la et envoyez-la par texto.',sendEmail:'Envoyer par courriel',emailSubject:'Demande d’appel'},
+  es:{fPhone:'Teléfono',fEmail:'Correo electrónico',fProducts:'Productos que te interesan',fProductsHint:'(marca todos los que apliquen)',
+    p1:'TFSA (CELI)',p2:'RRSP (REER)',p3:'RESP (REEE)',p4:'FHSA (CELIAPP)',p5:'Seguro de vida con participación',p6:'Seguro de vida universal',p7:'Cuenta no registrada',p8:'Otro',
+    needName:'Escribe tu nombre, un teléfono y un correo válido.',msgPhone:'Teléfono',msgEmail:'Correo',msgProducts:'Productos',
+    msgHint:'Envíasela a Mohamad por correo, o cópiala y envíala por mensaje.',sendEmail:'Enviar por correo',emailSubject:'Solicitud de llamada'},
+  ar:{fPhone:'الهاتف',fEmail:'البريد الإلكتروني',fProducts:'المنتجات التي تهمّك',fProductsHint:'(اختر كل ما ينطبق)',
+    p1:'حساب ادخار معفى من الضريبة (CELI)',p2:'خطة ادخار التقاعد (REER)',p3:'خطة ادخار التعليم (REEE)',p4:'حساب ادخار أول منزل (CELIAPP)',p5:'تأمين على الحياة مع المشاركة في الأرباح',p6:'تأمين على الحياة الشامل (يونيفرسال)',p7:'حساب غير مسجّل',p8:'غير ذلك',
+    needName:'أدخل اسمك ورقم هاتف وبريداً إلكترونياً صحيحاً.',msgPhone:'الهاتف',msgEmail:'البريد',msgProducts:'المنتجات',
+    msgHint:'أرسله إلى محمد بالبريد الإلكتروني، أو انسخه وأرسله برسالة نصية.',sendEmail:'أرسل بالبريد',emailSubject:'طلب مكالمة'},
+  zh:{fPhone:'电话',fEmail:'电子邮件',fProducts:'您感兴趣的产品',fProductsHint:'（可多选）',
+    p1:'免税储蓄账户 TFSA (CELI)',p2:'注册退休储蓄计划 RRSP (REER)',p3:'注册教育储蓄计划 RESP (REEE)',p4:'首次购房储蓄账户 FHSA (CELIAPP)',p5:'分红终身寿险',p6:'万能寿险',p7:'非注册账户',p8:'其他',
+    needName:'请输入姓名、电话号码和有效的电子邮件。',msgPhone:'电话',msgEmail:'电子邮件',msgProducts:'产品',
+    msgHint:'通过电子邮件发送给 Mohamad，或复制后用短信发送。',sendEmail:'通过邮件发送',emailSubject:'通话预约'}
+};
+Object.keys(BOOK2).forEach(k => Object.assign(LANGS[k], BOOK2[k]));
+
+// Advisor contact details: fill these in to show them in the booking section.
+const ADVISOR = { phone:'', email:'', bookingUrl:'' };
+// Client requests are emailed to this address through FormSubmit (formsubmit.co).
+const FORM_TO = 'factoryfocus01@gmail.com';
+const BOOK3 = {
+  en:{bookBtn:'Send my request',sending:'Sending…',sentTitle:'Request sent',sentText:'Thank you. Mohamad has received your request and will contact you soon.',sendFail:'The request could not be sent. Copy the message below and send it to Mohamad.'},
+  fr:{bookBtn:'Envoyer ma demande',sending:'Envoi…',sentTitle:'Demande envoyée',sentText:'Merci. Mohamad a bien reçu votre demande et vous contactera bientôt.',sendFail:'La demande n’a pas pu être envoyée. Copiez le message ci-dessous et envoyez-le à Mohamad.'},
+  es:{bookBtn:'Enviar mi solicitud',sending:'Enviando…',sentTitle:'Solicitud enviada',sentText:'Gracias. Mohamad recibió tu solicitud y te contactará pronto.',sendFail:'No se pudo enviar la solicitud. Copia el mensaje de abajo y envíaselo a Mohamad.'},
+  ar:{bookBtn:'أرسل طلبي',sending:'جارٍ الإرسال…',sentTitle:'تم إرسال الطلب',sentText:'شكراً. استلم محمد طلبك وسيتواصل معك قريباً.',sendFail:'تعذّر إرسال الطلب. انسخ الرسالة أدناه وأرسلها إلى محمد.'},
+  zh:{bookBtn:'发送我的请求',sending:'正在发送…',sentTitle:'请求已发送',sentText:'谢谢。Mohamad 已收到您的请求，将很快与您联系。',sendFail:'请求未能发送。请复制下面的消息并发送给 Mohamad。'}
+};
+Object.keys(BOOK3).forEach(k => Object.assign(LANGS[k], BOOK3[k]));
+
+const ORDER = ['fr','en','es','ar','zh'];
+const $ = id => document.getElementById(id);
+let L = 'en', T = LANGS.en;
+
+function pickInitial(){
+  try{ const s = localStorage.getItem('lang'); if (s && LANGS[s]) return s; }catch(e){}
+  const nav = (navigator.languages || [navigator.language || 'en']).map(x => (x||'').slice(0,2).toLowerCase());
+  return nav.find(c => LANGS[c]) || 'en';
+}
+
+// Language buttons
+$('langs').innerHTML = ORDER.map(c => `<button type="button" data-lang="${c}" lang="${c}"><b>${c.toUpperCase()}</b>${LANGS[c].name}</button>`).join('');
+$('langs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setLang(b.dataset.lang); });
+
+function setLang(code){
+  L = code; T = LANGS[code];
+  try{ localStorage.setItem('lang', code) }catch(e){}
+  document.documentElement.lang = code;
+  $('app').dir = T.dir; $('app').lang = code;
+  document.title = `Mohamad Albarraj · ${T.title}`;
+  document.querySelectorAll('[data-i]').forEach(el => { const v = T[el.dataset.i]; if (typeof v === 'string') el.textContent = v; });
+  document.querySelectorAll('#langs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === code));
+  $('chart').setAttribute('aria-label', T.chartAria);
+  $('rateR').setAttribute('aria-label', T.rate); $('yearsR').setAttribute('aria-label', T.years);
+  renderAge();
+}
+
+// Tabs
+const tabs = [['tab-age','p-age'],['tab-inv','p-inv']];
+tabs.forEach(([t]) => $(t).addEventListener('click', () => {
+  tabs.forEach(([t2,p2]) => { $(t2).setAttribute('aria-selected', t2===t); $(p2).hidden = t2!==t; });
+  try{ localStorage.setItem('tab', t) }catch(e){}
+}));
+try{ const s = localStorage.getItem('tab'); if (s && $(s)) $(s).click(); }catch(e){}
+
+const num = n => new Intl.NumberFormat(T.locale, {maximumFractionDigits:0}).format(Math.round(n));
+
+// ---------- Age ----------
+function ageParts(dob, now){
+  let y = now.getFullYear()-dob.getFullYear(), m = now.getMonth()-dob.getMonth(), d = now.getDate()-dob.getDate();
+  if (d < 0){ m--; d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+  if (m < 0){ y--; m += 12; }
+  return {y,m,d};
+}
+function currentAge(){
+  const v = $('dob').value; if(!v) return null;
+  const [Y,M,D] = v.split('-').map(Number);
+  const dob = new Date(Y, M-1, D), now = new Date(); now.setHours(0,0,0,0);
+  if (isNaN(dob) || dob > now) return null;
+  return {dob, now, ...ageParts(dob, now)};
+}
+function renderAge(){
+  const a = currentAge();
+  if(!a){
+    $('ageMain').textContent='—'; $('ageExact').textContent=T.badDob;
+    ['sMonths','sWeeks','sDays','sHours','sNext','sWeekday'].forEach(i=>$(i).textContent='—'); $('sNextK').textContent='';
+    renderInv(); return;
+  }
+  const {dob, now, y, m, d} = a;
+  $('ageMain').innerHTML = `${num(y)}<span class="unit">${T.yearsU}</span>`;
+  $('ageExact').textContent = T.exact(num(y), num(m), num(d));
+  const days = Math.round((now - dob)/864e5);
+  $('sMonths').textContent = num(y*12+m);
+  $('sWeeks').textContent = num(Math.floor(days/7));
+  $('sDays').textContent = num(days);
+  $('sHours').textContent = num(days*24);
+  let next = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
+  if (next < now) next = new Date(now.getFullYear()+1, dob.getMonth(), dob.getDate());
+  const left = Math.round((next-now)/864e5);
+  $('sNext').textContent = left===0 ? T.today : T.daysLeft(num(left));
+  $('sNextK').textContent = left===0 ? T.hbd : T.untilTurn(num(next.getFullYear()-dob.getFullYear()));
+  const wd = new Intl.DateTimeFormat(T.locale, {weekday:'long'}).format(dob);
+  $('sWeekday').textContent = wd.charAt(0).toUpperCase() + wd.slice(1);
+  renderInv();
+}
+$('dob').addEventListener('input', renderAge);
+
+// ---------- Investment ----------
+function sync(a,b){ $(a).addEventListener('input',()=>{ $(b).value=$(a).value; renderInv(); }); }
+sync('rateN','rateR'); sync('rateR','rateN'); sync('yearsN','yearsR'); sync('yearsR','yearsN');
+['principal','monthly','freq','comp','cur'].forEach(id => $(id).addEventListener('input', renderInv));
+
+function simulate(P, monthly, ratePct, years, comp){
+  const r = ratePct/100, rows = [];
+  let bal = P, paid = P, simpleGain = 0;
+  for (let yr=1; yr<=years; yr++){
+    let yearDeposits = 0;
+    for (let mo=0; mo<12; mo++){
+      if (comp===12) bal = bal*(1+r/12) + monthly;
+      else if (comp===0){ simpleGain += paid*r/12; bal += monthly; }
+      else { bal += monthly; yearDeposits += monthly; }
+      paid += monthly;
+    }
+    // yearly compounding: balance at start of year earns full rate, this year's deposits earn about half a year
+    if (comp===1) bal = (bal - yearDeposits)*(1+r) + yearDeposits*(1+r/2);
+    rows.push({yr, paid, total: comp===0 ? paid+simpleGain : bal});
+  }
+  return rows;
+}
+function money(n){
+  return new Intl.NumberFormat(T.locale, {style:'currency', currency:$('cur').value, maximumFractionDigits:0, minimumFractionDigits:0}).format(Math.round(n));
+}
+
+function renderInv(){
+  const P = Math.max(0, +$('principal').value||0), amt = Math.max(0, +$('monthly').value||0), perYr = +$('freq').value, mo = amt*perYr/12;
+  $('perYear').textContent = amt>0 ? T.perYear(money(amt*perYr)) : '';
+  const r = Math.max(0, +$('rateN').value||0), Y = Math.min(60, Math.max(1, Math.round(+$('yearsN').value||1)));
+  const comp = +$('comp').value;
+  const rows = simulate(P, mo, r, Y, comp), last = rows[rows.length-1];
+  $('afterLbl').textContent = T.after(num(Y));
+  $('finalV').textContent = money(last.total);
+  $('paidV').textContent = money(last.paid);
+  $('gainV').textContent = money(last.total-last.paid);
+  $('multV').textContent = last.paid>0 ? `×${new Intl.NumberFormat(T.locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(last.total/last.paid)}` : '—';
+
+  const a = currentAge();
+  $('ageLink').innerHTML = a ? T.linkYes(num(a.y), money(last.total), num(a.y+Y)) : T.linkNo;
+
+  $('tbody').innerHTML = rows.map(x => `<tr><td>${num(x.yr)}</td><td>${a? num(a.y+x.yr) : '—'}</td><td>${money(x.paid)}</td><td class="g">${money(x.total-x.paid)}</td><td><b>${money(x.total)}</b></td></tr>`).join('');
+  drawChart(rows, P);
+  if (!$('msgBox').hidden) buildMsg();
+}
+
+function drawChart(rows, P){
+  const W=600,H=260,pt=12,pb=28, rtl = T.dir==='rtl', svg=$('chart');
+  const pl = rtl ? 8 : 62, pr = rtl ? 62 : 8;
+  const max = Math.max(...rows.map(r=>r.total), 1), nice = niceMax(max);
+  const pts = [{yr:0,paid:P,total:P}, ...rows];
+  const frac = i => i/(pts.length-1);
+  const x = i => rtl ? W-pr - frac(i)*(W-pr-pl) : pl + frac(i)*(W-pr-pl);
+  const y = v => pt + (1 - v/nice)*(H-pt-pb);
+  const area = (key, baseKey) => {
+    let d = pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join('');
+    for (let i=pts.length-1;i>=0;i--) d += `L${x(i).toFixed(1)},${y(baseKey?pts[i][baseKey]:0).toFixed(1)}`;
+    return d+'Z';
+  };
+  const axisX = rtl ? W-pr+6 : pl-6, anchor = rtl ? 'start' : 'end';
+  let g = '';
+  for (let k=0;k<=4;k++){
+    const v = nice*k/4, yy=y(v);
+    g += `<line x1="${pl}" x2="${W-pr}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1"/>`;
+    g += `<text x="${axisX}" y="${yy+4}" font-size="11" fill="var(--muted)" text-anchor="${anchor}" direction="ltr" font-family="IBM Plex Sans Arabic, sans-serif">${short(v)}</text>`;
+  }
+  const step = Math.max(1, Math.ceil(rows.length/6));
+  for (let i=0;i<pts.length;i+=step)
+    g += `<text x="${x(i)}" y="${H-8}" font-size="11" fill="var(--muted)" text-anchor="middle" font-family="IBM Plex Sans Arabic, sans-serif">${num(pts[i].yr)}</text>`;
+  g += `<path d="${area('total','paid')}" fill="var(--accent)" fill-opacity=".35"/>`;
+  g += `<path d="${area('paid')}" fill="var(--gold)" fill-opacity=".45"/>`;
+  g += `<path d="${pts.map((p,i)=>`${i?'L':'M'}${x(i)},${y(p.total)}`).join('')}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
+  const li = pts.length-1;
+  g += `<circle cx="${x(li)}" cy="${y(pts[li].total)}" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`;
+  svg.innerHTML = g;
+}
+function niceMax(v){ const e=Math.pow(10,Math.floor(Math.log10(v))); const f=v/e; return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*e; }
+function short(v){ return new Intl.NumberFormat('en', {notation:'compact', maximumFractionDigits:1}).format(v); }
+
+// ---------- Booking ----------
+function selText(id){ const s = $(id); return s.options[s.selectedIndex].text; }
+function buildMsg(){
+  const a = currentAge();
+  const P = Math.max(0, +$('principal').value||0), amt = Math.max(0, +$('monthly').value||0);
+  const lines = [
+    T.msgHello, '', T.msgWant, '',
+    `${T.msgName}: ${$('bName').value.trim()}`,
+    `${T.msgPhone}: ${$('bPhone').value.trim()}`,
+    `${T.msgEmail}: ${$('bEmail').value.trim()}`,
+    `${T.msgProducts}: ${checkedProducts().join(', ') || '—'}`,
+    `${T.msgWhen}: ${selText('bWhen')}`
+  ];
+  const notes = $('bNotes').value.trim();
+  if (notes) lines.push(`${T.msgNotes}: ${notes}`);
+  lines.push('', `${T.msgScenario}:`);
+  if (a) lines.push(`• ${T.ageToday}: ${num(a.y)} ${T.yearsU}`);
+  lines.push(
+    `• ${T.principal}: ${money(P)}`,
+    `• ${T.monthly}: ${money(amt)} (${selText('freq')})`,
+    `• ${T.rate}: ${$('rateN').value}`,
+    `• ${T.years}: ${$('yearsN').value}`,
+    `• ${T.thTotal}: ${$('finalV').textContent}`
+  );
+  $('bMsg').value = lines.join('\n');
+  $('bMsg').dir = T.dir;
+  if (ADVISOR.email){
+    const subj = `${T.emailSubject} – ${$('bName').value.trim()}`;
+    $('bMail').href = `mailto:${ADVISOR.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent($('bMsg').value)}`;
+    $('bMail').hidden = false;
+  }
+}
+function checkedProducts(){
+  return [...document.querySelectorAll('#bProds input:checked')].map(i => i.nextElementSibling.textContent);
+}
+function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
+function validPhone(v){ return (v.match(/\d/g) || []).length >= 7; }
+$('bookForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const ok = $('bName').value.trim() && validPhone($('bPhone').value) && validEmail($('bEmail').value.trim());
+  $('bErr').hidden = !!ok;
+  if (!ok) return;
+  buildMsg(); $('bCopyS').textContent = '';
+  $('sentBox').hidden = true; $('sendErr').hidden = true; $('msgBox').hidden = true;
+  const btn = $('bSubmit'); btn.disabled = true; btn.textContent = T.sending;
+  const a = currentAge();
+  const payload = {
+    _subject: `Nouvelle demande d'appel : ${$('bName').value.trim()}`,
+    _template: 'table',
+    _captcha: 'false',
+    'Nom': $('bName').value.trim(),
+    'Téléphone': $('bPhone').value.trim(),
+    email: $('bEmail').value.trim(),
+    'Produits': [...document.querySelectorAll('#bProds input:checked')].map(i => i.value).join(', ') || '—',
+    'Meilleur moment': LANGS.fr[{any:'wAny',am:'wMorning',pm:'wAfternoon',eve:'wEvening'}[$('bWhen').value]],
+    'Notes': $('bNotes').value.trim() || '—',
+    'Âge': a ? `${a.y} ans` : '—',
+    'Montant de départ': $('principal').value + ' ' + $('cur').value,
+    'Cotisation': `${$('monthly').value} ${$('cur').value} (${LANGS.fr[{52:'fW',26:'fB',12:'fM',1:'fY'}[$('freq').value]]})`,
+    'Rendement annuel': $('rateN').value + ' %',
+    'Durée': $('yearsN').value + ' ans',
+    'Total estimé': $('finalV').textContent,
+    'Langue du client': LANGS[L].name,
+    'Message complet': $('bMsg').value
+  };
+  try{
+    const r = await fetch(`https://formsubmit.co/ajax/${FORM_TO}`, {
+      method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify(payload)
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || String(j.success) === 'false') throw new Error(j.message || r.status);
+    $('sentBox').hidden = false;
+    $('bookForm').reset();
+  }catch(err){
+    $('sendErr').hidden = false; $('msgBox').hidden = false;
+  }finally{
+    btn.disabled = false; btn.textContent = T.bookBtn;
+  }
+  ($('sentBox').hidden ? $('msgBox') : $('sentBox')).scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'nearest'});
+});
+['bName','bPhone','bEmail','bWhen','bNotes','bProds'].forEach(id => $(id).addEventListener('input', () => { if (!$('msgBox').hidden) buildMsg(); }));
+$('bProds').addEventListener('change', () => { if (!$('msgBox').hidden) buildMsg(); });
+$('bCopy').addEventListener('click', () => {
+  const text = $('bMsg').value;
+  const fail = () => { $('bMsg').focus(); $('bMsg').select(); $('bCopyS').textContent = T.copyFail; };
+  try{
+    navigator.clipboard.writeText(text).then(() => { $('bCopyS').textContent = T.copied; }, fail);
+  }catch(e){ fail(); }
+});
+(function(){
+  if (ADVISOR.phone){ $('cPhone').textContent = ADVISOR.phone; $('cPhone').hidden = false; }
+  if (ADVISOR.email){ $('cEmail').textContent = ADVISOR.email; $('cEmail').hidden = false; }
+  if (ADVISOR.bookingUrl){ $('cBook').href = ADVISOR.bookingUrl; $('cBook').hidden = false; }
+  $('contactBox').hidden = !(ADVISOR.phone || ADVISOR.email || ADVISOR.bookingUrl);
+})();
+
+setLang(pickInitial());
+</script>
+
+</body>
+</html>
