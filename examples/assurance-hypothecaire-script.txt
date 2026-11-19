@@ -1,0 +1,17 @@
+Buying a home in Canada with less than twenty percent down? Then you need mortgage insurance. [Less than 20% down?] {house}
+
+This is mortgage default insurance. It protects your lender, not you, if you stop making your payments. [It protects the lender] {lock}
+
+It comes from three insurers: CMHC, Sagen and Canada Guaranty. [CMHC · Sagen · Canada Guaranty] {person}
+
+The premium depends on your down payment: four percent of the loan with five percent down, three point one with ten, and two point eight with fifteen. [5% → 4% · 10% → 3.1% · 15% → 2.8%] {money}
+
+The premium is usually added to your mortgage. But in Quebec, Ontario and Saskatchewan, the sales tax on it is due at closing. [Sales tax due at closing] {warning}
+
+Insured mortgages are allowed on homes up to one point five million dollars. First-time buyers and buyers of new builds can spread them over thirty years. [Up to $1.5M · 30 years] {calendar}
+
+There's a second kind: mortgage life insurance. It pays off your home if you die, so your family keeps the house. [Protects your family] {heart}
+
+The lender's version usually shrinks as you pay down your loan. A personal term life policy keeps the same coverage, and you choose who gets the money. [Compare before you sign] {search}
+
+Know which insurance you're paying for, and protect your home and the people in it. [Protect your home!] {trophy}
