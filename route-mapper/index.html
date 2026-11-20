@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a73e8">
+<title>Route Mapper</title>
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<meta name="apple-mobile-web-app-title" content="Route Mapper">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<style>
+:root{--blue:#1a73e8;--fg:#202124;--muted:#5f6368;--line:#dadce0;--chip:#f1f3f4;--bg:#fff;--red:#d93025}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font:14px/1.4 Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--fg);background:var(--bg);-webkit-text-size-adjust:100%}
+button{font:inherit;cursor:pointer}
+#app{display:flex;height:100%;height:100dvh}
+#side{width:390px;max-width:100%;display:flex;flex-direction:column;border-right:1px solid var(--line);background:#fff;z-index:2}
+#mapwrap{flex:1;position:relative;min-width:0}#map{position:absolute;inset:0}
+header{padding:12px 14px 8px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:8px}.brand h1{font-size:17px;margin:0;flex:1}
+.logo{width:26px;height:26px;border-radius:50%;background:var(--blue);display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:18px;padding:6px 12px;color:var(--blue);font-weight:500;font-size:13px}
+.btn.pri{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn:disabled{opacity:.5}
+.rname{font-size:13px;color:var(--muted);margin-top:4px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.kpi{background:var(--chip);border-radius:10px;padding:6px 8px}.kpi b{display:block;font-size:17px}.kpi span{font-size:11px;color:var(--muted)}
+#search{width:100%;margin-top:8px;padding:9px 14px;border:1px solid var(--line);border-radius:22px;font-size:16px;outline:none}
+#search:focus{border-color:var(--blue);box-shadow:0 1px 4px rgba(26,115,232,.25)}
+.tabs{display:flex;border-bottom:1px solid var(--line)}.tabs button{flex:1;padding:10px 4px;border:0;background:none;color:var(--muted);border-bottom:3px solid transparent;font-weight:500}
+.tabs button.on{color:var(--blue);border-bottom-color:var(--blue)}
+.pane{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}.pane[hidden]{display:none}
+.zones{padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line)}
+.zones label{display:flex;align-items:center;gap:5px;font-size:12px;background:var(--chip);padding:4px 9px;border-radius:999px;cursor:pointer}
+.sw{width:11px;height:11px;border-radius:50%;display:inline-block;flex:none}
+.opts{padding:6px 14px;font-size:12.5px;display:flex;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.item{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid #f1f3f4;cursor:pointer}.item:hover{background:#f8f9fa}
+.item .n{min-width:54px;text-align:center;font-weight:700;border-radius:8px;color:#fff;padding:3px 4px;font-size:12px;height:fit-content}
+.item .a{font-weight:500}.item .m{font-size:12px;color:var(--muted)}
+.flag{color:var(--red);font-weight:500}
+.sec{padding:12px 14px}.sec h3{font-size:14px;margin:14px 0 6px}
+.sec table{width:100%;border-collapse:collapse;font-size:12.5px}.sec td,.sec th{padding:4px 6px;border-bottom:1px solid #f1f3f4;text-align:left;vertical-align:top}.sec td.r{text-align:right;white-space:nowrap}
+.note{background:#e8f0fe;border-radius:10px;padding:8px 10px;font-size:12.5px;margin:8px 0}
+.warn{background:#fce8e6;border-radius:10px;padding:8px 10px;font-size:12.5px;margin:8px 0}
+.exports{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px;border-bottom:1px solid var(--line)}
+/* markers */
+.pin{border-radius:12px;color:#fff;font-weight:700;font-size:11.5px;line-height:17px;padding:1px 6px;white-space:nowrap;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:pointer}
+.pin.multi{border-color:#202124}.pin.flagged{outline:2px dashed var(--red);outline-offset:1px}
+.pin.first{box-shadow:0 0 0 4px #34a853,0 1px 4px rgba(0,0,0,.4)}.pin.last{box-shadow:0 0 0 4px #ea4335,0 1px 4px rgba(0,0,0,.4)}
+.maplibregl-popup-content{border-radius:12px;padding:12px 14px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.pop{font-size:13px;max-width:290px}.pop h4{margin:0 0 2px;font-size:15px}.pop table{border-collapse:collapse;width:100%;margin-top:6px;font-size:12px}.pop td{border-top:1px solid #eee;padding:3px 4px}
+.pop .links a{display:inline-block;margin:8px 10px 0 0;color:var(--blue);font-weight:500;text-decoration:none}
+.mapbtns{position:absolute;right:10px;bottom:30px;display:flex;flex-direction:column;gap:8px;z-index:1}
+.mapbtns button{background:#fff;border:0;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.3);padding:8px 10px;font-size:12px;font-weight:500;color:var(--fg)}
+.mapbtns button.on{color:var(--blue)}
+#placing{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#202124;color:#fff;padding:8px 14px;border-radius:18px;z-index:3;font-size:13px;display:none}
+/* start / progress overlay */
+#start{position:fixed;inset:0;background:#f8f9fa;z-index:10;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 16px}
+.card{background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(60,64,67,.3),0 4px 8px rgba(60,64,67,.15);width:100%;max-width:560px;padding:22px}
+.card h2{margin:0 0 6px;font-size:22px}.card p{color:var(--muted);margin:6px 0 14px}
+.drop{display:block;border:2px dashed var(--line);border-radius:14px;padding:22px;text-align:center;cursor:pointer}.drop.over{border-color:var(--blue);background:#e8f0fe}
+.drop b{color:var(--blue)}
+#routes{margin-top:12px;max-height:55vh;overflow:auto;border:1px solid var(--line);border-radius:12px}
+#routes .r{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #f1f3f4;cursor:pointer}#routes .r:hover{background:#f8f9fa}
+#routes .r span{color:var(--muted);font-size:12.5px}
+#rfilter{width:100%;padding:9px 14px;border:1px solid var(--line);border-radius:22px;font-size:16px;margin-top:12px}
+.bar{height:6px;background:#e8eaed;border-radius:3px;overflow:hidden;margin:10px 0}.bar i{display:block;height:100%;background:var(--blue);width:0;transition:width .2s}
+#plog{font-size:12.5px;color:var(--muted)}
+#toggle{display:none}
+@media (max-width:760px){
+ #app{flex-direction:column-reverse}
+ #side{width:100%;height:52%;border-right:0;border-top:1px solid var(--line);box-shadow:0 -2px 8px rgba(0,0,0,.12);border-radius:14px 14px 0 0}
+ #side.min{height:auto}#side.min .tabs,#side.min .pane,#side.min .zones,#side.min .opts,#side.min .kpis,#side.min #search{display:none}
+ #toggle{display:inline-block}
+ header{padding:8px 12px 6px}.brand h1{font-size:16px}.rname{display:none}
+ .btn{padding:5px 10px;font-size:12.5px}
+ .kpis{margin-top:6px;gap:4px}.kpi{padding:3px 6px}.kpi b{font-size:15px}.kpi span{font-size:10.5px}
+ #search{margin-top:6px;padding:7px 12px}
+ .tabs button{padding:8px 4px}
+ .zones{flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;-webkit-overflow-scrolling:touch}.zones label{white-space:nowrap;font-size:11.5px}
+ .opts{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;padding:5px 12px}
+ .item,.sec,.exports{padding-left:12px;padding-right:12px}
+ .mapbtns{top:10px;left:10px;right:auto;bottom:auto;flex-direction:row}
+ .maplibregl-ctrl-attrib.maplibregl-compact{font-size:10px}
+}
+</style>
+</head>
+<body>
+<div id="start">
+ <div class="card">
+  <div class="brand"><div class="logo">R</div><h2>Route Mapper</h2></div>
+  <p>Load an Intelcom driver manifest (PDF), choose a route, and get the delivery map: stops grouped, official Québec addresses, driving route and analysis.</p>
+  <label class="drop" id="drop"><input type="file" id="file" accept="application/pdf,.pdf" hidden>
+   <div style="font-size:30px">📄</div><div><b>Choose manifest PDF</b> or drop it here</div><div style="font-size:12px;color:#5f6368;margin-top:4px">The PDF is read on this device only</div></label>
+  <div id="pick" hidden>
+   <div style="font-weight:500;margin-top:16px">Choose the route to map</div><input id="rfilter" type="search" placeholder="Search route (e.g. BELO1200)">
+   <div id="routes"></div>
+  </div>
+  <div id="prog" hidden><div id="ptitle" style="font-weight:500;margin-top:14px"></div><div class="bar"><i id="pbar"></i></div><div id="plog"></div></div>
+  <div id="resume" hidden style="margin-top:14px"></div>
+ </div>
+</div>
+<div id="app">
+ <aside id="side">
+  <header>
+   <div class="brand"><div class="logo">R</div><h1>Route <span id="rn"></span></h1><button class="btn" id="toggle" type="button">Hide</button><button class="btn" id="newbtn" type="button">Change route</button></div>
+   <div class="rname" id="rsub"></div>
+   <div class="kpis"><div class="kpi"><b id="k1"></b><span>packages</span></div><div class="kpi"><b id="k2"></b><span>stops</span></div><div class="kpi"><b id="k3"></b><span>shared stops</span></div><div class="kpi"><b id="k4"></b><span>road km</span></div></div>
+   <input id="search" type="search" placeholder="Search address, seq # or tracking" autocomplete="off">
+  </header>
+  <div class="tabs"><button class="on" data-t="list">Stops</button><button data-t="analysis">Analysis</button><button data-t="issues">Issues <span id="icount"></span></button></div>
+  <div class="zones" id="zones"></div>
+  <div class="opts"><label><input type="checkbox" id="optDrive" checked> Driving route</label><label><input type="checkbox" id="optArrows" checked> Arrows</label><label><input type="checkbox" id="optLine"> Straight-line order</label></div>
+  <div class="pane" id="list"></div>
+  <div class="pane" id="analysis" hidden><div class="exports"><button class="btn" id="exStops">Stops CSV</button><button class="btn" id="exPk">Packages CSV</button><button class="btn" id="exKml">Google My Maps (KML)</button></div><div class="sec" id="anbody"></div></div>
+  <div class="pane sec" id="issues" hidden></div>
+ </aside>
+ <div id="mapwrap"><div id="map"></div>
+  <div id="placing">Tap the map where this address is</div>
+  <div class="mapbtns"><button id="bSat">Satellite</button><button id="bFit">Whole route</button><button id="bLoc">📍 Me</button></div>
+ </div>
+</div>
+<script>
+/*CORE-START*/
+// ---------- Manifest parsing (Intelcom driver manifest) ----------
+const COL = { codeMax: 125, trackMax: 245, seqMax: 278, addrMax: 578 };
+async function parseManifest(pdfjs, doc, onProgress) {
+  const routes = new Map();
+  let lastRoute = null;
+  for (let pn = 1; pn <= doc.numPages; pn++) {
+    const page = await doc.getPage(pn);
+    const vp = page.getViewport({ scale: 1 });
+    const tc = await page.getTextContent();
+    const items = [];
+    for (const it of tc.items) {
+      const s = (it.str || '').trim();
+      if (!s) continue;
+      const t = pdfjs.Util.transform(vp.transform, it.transform);
+      items.push({ x: t[4], y: t[5], s });
+    }
+    page.cleanup && page.cleanup();
+    const HDR = /^(Code|Tracking ID|Seq|Address|Dimensions|Signature|Intelcom .*|From \d{4}-.*|Route\s*-.*|Total number of packages.*)$/i;
+    const heads = [];
+    for (const it of items) {
+      const m = it.s.match(/^Route\s*-\s*(.+)$/);
+      if (m) {
+        let name = m[1].trim();
+        const lab = items.find(j => j !== it && j.y < it.y - 1 && j.y > it.y - 16 && j.x < 300 && !/^(Intelcom|From \d)/.test(j.s));
+        if (lab && lab.s.trim() !== name) name = `${name} (${lab.s.trim()})`;
+        heads.push({ y: it.y, name, total: null });
+      }
+    }
+    heads.sort((a, b) => a.y - b.y);
+    for (const it of items) {
+      const m = it.s.match(/Total number of packages\s*:\s*(\d+)/i);
+      if (m) { let h = null; for (const c of heads) if (c.y <= it.y + 4) h = c; if (h) h.total = +m[1]; }
+    }
+    const routeAt = y => { let h = null; for (const c of heads) if (c.y <= y + 1) h = c; return h ? h.name : lastRoute; };
+    const getR = name => {
+      if (!routes.has(name)) routes.set(name, { name, total: null, pages: [], records: [] });
+      const R = routes.get(name); if (!R.pages.includes(pn)) R.pages.push(pn); return R;
+    };
+    heads.forEach(h => { const R = getR(h.name); if (R.total == null && h.total != null) R.total = h.total; });
+    const body = items.filter(i => !HDR.test(i.s) && !(heads.length && i.y < heads[0].y && !lastRoute)).sort((a, b) => a.y - b.y || a.x - b.x);
+    const isCode = i => i.x < COL.codeMax && /^[A-Z]{0,5}\d{6,}$/.test(i.s.split(/\s+/)[0]);
+    const starts = body.filter(isCode);
+    const recs = starts.map(s => ({ y: s.y, route: routeAt(s.y), code: s.s.split(/\s+/)[0], track: [], seq: [], addr: [] }));
+    for (const it of body) {
+      if (starts.includes(it)) continue;
+      let r = null;
+      for (const c of recs) if (c.y <= it.y + 3) r = c;
+      if (!r) continue;
+      if (heads.some(h => h.y > r.y && h.y <= it.y + 1)) continue; // belongs to a later section header
+      if (it.x < COL.codeMax) continue;
+      else if (it.x < COL.trackMax) r.track.push(it);
+      else if (it.x < COL.seqMax) r.seq.push(it);
+      else if (it.x < COL.addrMax) r.addr.push(it);
+    }
+    if (heads.length) lastRoute = heads[heads.length - 1].name;
+    for (const r of recs) {
+      const seq = parseInt(r.seq.map(i => i.s).join(''), 10);
+      const address = r.addr.map(i => i.s).join(' ').replace(/\s+/g, ' ').trim();
+      if (!r.route) continue;
+      getR(r.route).records.push({ code: r.code, tracking: r.track.map(i => i.s).join(''), seq: isNaN(seq) ? null : seq, address, page: pn });
+    }
+    if (onProgress && (pn % 10 === 0 || pn === doc.numPages)) onProgress(pn, doc.numPages);
+  }
+  return [...routes.values()];
+}
+
+// ---------- Address normalisation ----------
+const SYN = { st: 'saint', ste: 'sainte', street: 'rue', str: 'rue', av: 'avenue', ave: 'avenue', boul: 'boulevard', blvd: 'boulevard', bd: 'boulevard',
+  ch: 'chemin', rte: 'route', '1re': '1', '1ere': '1', premiere: '1', ere: '1', '1er': '1', premier: '1', '2e': '2', '2eme': '2', deuxieme: '2',
+  '3e': '3', '3eme': '3', troisieme: '3', '4e': '4', '5e': '5', mont: 'mont', n: 'nord', s: 'sud', o: 'ouest', e: 'est' };
+const TYPES = new Set(['rue', 'avenue', 'boulevard', 'chemin', 'rang', 'route', 'place', 'montee', 'croissant', 'terrasse', 'impasse', 'allee', 'cote',
+  'carre', 'promenade', 'circle', 'crescent', 'road', 'drive', 'court', 'rd', 'way', 'lane', 'cercle', 'sentier', 'ruelle', 'voie']);
+const STOPW = new Set(['de', 'la', 'du', 'des', 'd', 'l', 'le', 'les', 'of', 'the']);
+const FILLER = new Set(['unit', 'unite', 'apt', 'app', 'appt', 'appartement', 'suite', 'maison', 'house', 'bureau', 'local', 'porte', 'no', 'num']);
+const RURAL = new Set(['rang', 'chemin', 'route', 'montee']);
+function strip(s) { return s.normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function toks(s) {
+  return strip(String(s)).toLowerCase().replace(/[’'`\-#.,/]/g, ' ').split(/\s+/).filter(Boolean).map(t => SYN[t] || t);
+}
+function lev1(a, b) { // edit distance <= 1
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, d = 0;
+  while (i < a.length && j < b.length) { if (a[i] === b[j]) { i++; j++; continue; } if (++d > 1) return false; if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; } }
+  return d + (a.length - i) + (b.length - j) <= 1;
+}
+function near(a, b) { return a === b || (a.length >= 5 && b.length >= 5 && lev1(a, b)) || a + 's' === b || b + 's' === a; }
+function hasNear(arr, t) { for (const x of arr) if (near(x, t)) return true; return false; }
+function coreToks(street) { return toks(street).filter(t => !TYPES.has(t) && !STOPW.has(t)); }
+function typeToks(street) { return toks(street).filter(t => TYPES.has(t)); }
+function splitAddress(raw) {
+  let a = raw.replace(/^CA[\d.]+\s+/, '').trim();
+  const m = a.match(/^(.*?)\s+(QC|Qc|QUEBEC|Québec)\s+([A-Za-z]\d[A-Za-z])\s?(\d[A-Za-z]\d)\b/);
+  if (!m) return { body: a.replace(/\s+CA$/, ''), muni: '', postal: '' };
+  const pre = m[1].trim(); const parts = pre.split(/\s+/);
+  const muni = parts.length > 1 ? parts.pop() : '';
+  return { body: parts.join(' '), muni, postal: (m[3] + m[4]).toUpperCase() };
+}
+function parseNom(nom) {
+  // "3665 rue Hamel, Saint-Jean-Baptiste J0L2B0"  or "3331 B rue des Cyprès, ..."
+  const m = nom.match(/^(\d+)(?:\s+([A-Z]))?\s+(.*?),\s*(.*?)\s+([A-Z]\d[A-Z]\d[A-Z]\d)$/);
+  if (!m) return null;
+  let street = m[3], aqUnit = '';
+  const u = street.match(/^(\d+[A-Z]?)\s+(.+)$/); // "3425 1 boulevard Laurier" = unit 1
+  if (u && TYPES.has(toks(u[2])[0])) { aqUnit = u[1]; street = u[2]; }
+  return { civic: m[1], suffix: m[2] || '', street, muni: m[4], postal: m[5], aqUnit };
+}
+function titleStreet(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// ---------- Geocoding (Adresses Québec, then OpenStreetMap fallback) ----------
+const AQ_URL = 'https://geoegl.msp.gouv.qc.ca/apis/icherche/geocode';
+async function getJSON(url, tries = 3) {
+  let err;
+  for (let i = 0; i < tries; i++) {
+    try { const r = await fetch(url); if (r.status === 429) throw new Error('429'); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); }
+    catch (e) { err = e; await new Promise(res => setTimeout(res, 800 * (i + 1) + (String(e).includes('429') ? 2500 : 0))); }
+  }
+  throw err;
+}
+async function aq(q, limit = 10) {
+  const u = AQ_URL + '?' + new URLSearchParams({ q, type: 'adresses', limit, geometry: 'true' });
+  const d = await getJSON(u);
+  return (d.features || []).map(f => ({ nom: f.properties.nom, units: f.properties.nbUnite, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], p: parseNom(f.properties.nom) })).filter(c => c.p);
+}
+function scoreCand(c, ctx) {
+  const p = c.p;
+  if (ctx.postal ? p.postal !== ctx.postal : toks(p.muni).join(' ') !== toks(ctx.muni).join(' ')) return -1;
+  if (!ctx.nums.includes(p.civic)) return -1;
+  const core = coreToks(p.street);
+  const has = t => ctx.set.has(t) || hasNear(ctx.set, t);
+  if (!core.length || !core.every(has)) return -1;
+  let s = 10;
+  const ty = typeToks(p.street);
+  if (ty.length && ty.every(t => ctx.set.has(t))) s += 3;
+  if (p.civic === ctx.nums[0]) s += 2;
+  if (toks(p.muni).join(' ') === toks(ctx.muni).join(' ')) s += 1;
+  if (p.suffix) s -= ctx.set.has(p.suffix.toLowerCase()) ? 0 : 2;
+  if (p.aqUnit) s -= ctx.set.has(p.aqUnit.toLowerCase()) ? 0.5 : 2;
+  s += Math.min(core.length, 4) * 0.1;
+  return s;
+}
+function result(c, ctx, method, note) {
+  const p = c.p;
+  const streetTitle = titleStreet(p.street);
+  const ty = typeToks(p.street);
+  const typeDiffers = ty.length > 0 && !ty.every(t => ctx.set.has(t)) && ctx.bodyToks.some(t => TYPES.has(t));
+  // unit = leftover tokens
+  const used = new Set([...toks(p.street), ...toks(ctx.muni), ...toks(p.muni)]);
+  const unitParts = toks(ctx.body).filter(t => t !== p.civic && !used.has(t) && !TYPES.has(t) && !STOPW.has(t) && !FILLER.has(t) && /^[a-z0-9]{1,5}$/.test(t));
+  const unit = [...new Set(unitParts)].filter(t => !(p.suffix && t === p.suffix.toLowerCase())).join(' ').toUpperCase();
+  return {
+    ok: true, method, note: note || '', lat: c.lat, lon: c.lon,
+    civic: p.civic + (p.suffix ? ' ' + p.suffix : ''), street: streetTitle, muni: p.muni, postal: p.postal,
+    address: `${p.civic}${p.suffix ? ' ' + p.suffix : ''} ${streetTitle}`, official: c.nom, units: c.units,
+    unit: unit || (p.aqUnit || '').toUpperCase(), typeDiffers, rural: RURAL.has(toks(p.street)[0]) || toks(p.street).slice(0, 2).includes('rang'),
+  };
+}
+async function geocodeAddress(raw) {
+  const { body, muni, postal } = splitAddress(raw);
+  const bodyToks = toks(body);
+  const nums = (body.match(/\d+/g) || []);
+  const ctx = { body, muni, postal, bodyToks, set: new Set([...bodyToks]), nums };
+  if (!nums.length) return { ok: false, reason: 'No civic number in manifest address', body, muni, postal };
+  const pick = cands => { let best = null, bs = -1; for (const c of cands) { const s = scoreCand(c, ctx); if (s > bs) { bs = s; best = c; } } return bs > 0 ? best : null; };
+  const cleaned = bodyToks.filter(t => !FILLER.has(t)).join(' ');
+  for (const q of [`${body} ${muni}`, `${cleaned} ${postal}`, `${cleaned} ${muni} ${postal}`]) {
+    const c = pick(await aq(q, 10));
+    if (c) return result(c, ctx, 'exact');
+  }
+  // street missing / unclear: unique civic number inside the postal code
+  for (const civic of nums) {
+    const cands = [...await aq(`${civic} ${muni} ${postal}`, 15), ...await aq(`${civic} ${postal}`, 15)]
+      .filter(c => c.p.civic === civic && (!postal || c.p.postal === postal) && !c.p.suffix);
+    const uniq = new Map(); cands.forEach(c => uniq.set(`${c.p.civic} ${c.p.street}|${c.p.muni}`, c));
+    let list = [...uniq.values()];
+    const GENERIC = new Set(['saint', 'sainte', 'nord', 'sud', 'est', 'ouest', 'grand', 'petit', 'vieux', 'haut', 'bas', 'w', 'e']);
+    const muniT = new Set(toks(muni));
+    // words in the manifest that describe the street (not numbers, types, filler or the municipality name)
+    const streetWords = bodyToks.filter(t => !/^\d/.test(t) && !TYPES.has(t) && !STOPW.has(t) && !FILLER.has(t) && !muniT.has(t) && t.length > 1);
+    const strong = streetWords.filter(t => !GENERIC.has(t));
+    list = list.filter(c => !c.p.aqUnit || !list.some(o => o !== c && !o.p.aqUnit && o.p.street === c.p.street));
+    if (strong.length) list = list.filter(c => coreToks(c.p.street).some(t => hasNear(strong, t)));
+    else if (streetWords.length) list = list.filter(c => coreToks(c.p.street).some(t => streetWords.includes(t)));
+    if (list.length === 1) return result(list[0], ctx, 'inferred', `Manifest address "${body}" could not be matched exactly. Civic ${civic} in ${postal || muni} matches only "${list[0].nom}". Inferred, so verify on site.`);
+  }
+  // fallback: OpenStreetMap / Nominatim, only if the house number matches
+  try {
+    const u = 'https://nominatim.openstreetmap.org/search?' + new URLSearchParams({ q: `${body}, ${muni}, QC ${postal}, Canada`, format: 'jsonv2', addressdetails: 1, limit: 1 });
+    const d = await getJSON(u, 2);
+    if (d[0] && d[0].address && nums.includes(String(d[0].address.house_number))) {
+      const a = d[0].address;
+      const c = { lat: +d[0].lat, lon: +d[0].lon, nom: d[0].display_name, units: null, p: { civic: String(a.house_number), suffix: '', street: a.road || body, muni: a.city || a.town || a.village || a.municipality || muni, postal: (a.postcode || postal).replace(/\s/g, '').toUpperCase() } };
+      return result(c, ctx, 'approx', 'Not in the Adresses Québec register; position from OpenStreetMap, so verify.');
+    }
+  } catch (e) { /* ignore */ }
+  return { ok: false, reason: 'Address not found in Adresses Québec or OpenStreetMap', body, muni, postal };
+}
+
+// ---------- Stops, analysis ----------
+function hav(a, b) {
+  const R = 6371.0088, p1 = a[0] * Math.PI / 180, p2 = b[0] * Math.PI / 180, dp = p2 - p1, dl = (b[1] - a[1]) * Math.PI / 180;
+  return 2 * R * Math.asin(Math.sqrt(Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2));
+}
+function seqLabel(seqs) {
+  const s = [...seqs].sort((a, b) => a - b); const out = []; let i = 0;
+  while (i < s.length) { let j = i; while (j + 1 < s.length && s[j + 1] === s[j] + 1) j++; out.push(i === j ? '' + s[i] : `${s[i]}-${s[j]}`); i = j + 1; }
+  return out.join(',');
+}
+function buildStops(records, geo) {
+  const recs = [...records].sort((a, b) => a.seq - b.seq);
+  const stops = new Map(); const unresolved = [];
+  for (const r of recs) {
+    const g = geo[r.address];
+    if (!g || !g.ok) { unresolved.push({ ...r, reason: g ? g.reason : 'not geocoded' }); continue; }
+    const key = `${g.address}|${g.muni}`;
+    if (!stops.has(key)) {
+      const zone = `${g.muni} – ${g.rural ? 'rural' : 'village / residential'}`;
+      stops.set(key, { stop: stops.size + 1, address: g.address, street: g.street, municipality: g.muni, postal: g.postal.replace(/^(...)(...)$/, '$1 $2'),
+        zone, lat: g.lat, lon: g.lon, official: g.official, method: g.method, seqs: [], packages: [], units: new Set(), flags: new Set(), notes: new Set() });
+    }
+    const s = stops.get(key);
+    s.seqs.push(r.seq); s.packages.push({ seq: r.seq, tracking: r.tracking, code: r.code, manifest: r.address, unit: g.unit });
+    if (g.unit) s.units.add(g.unit);
+    if (g.method !== 'exact') s.flags.add(`Seq ${r.seq}: ${g.note}`);
+    if (g.typeDiffers) s.notes.add(`Manifest street type differs; official name: ${g.official.split(',')[0]}`);
+    const mm = splitAddress(r.address).muni;
+    if (mm && toks(mm).join(' ') !== toks(g.muni).join(' ')) s.notes.add(`Manifest says "${mm}"; official municipality is ${g.muni}`);
+  }
+  const L = [...stops.values()].map(s => ({ ...s, label: seqLabel(s.seqs), units: [...s.units].sort(), flags: [...s.flags], notes: [...s.notes],
+    split: Math.max(...s.seqs) - Math.min(...s.seqs) + 1 !== s.seqs.length }));
+  const bySeq = {}; L.forEach(s => s.seqs.forEach(q => bySeq[q] = s.stop));
+  const path = [];
+  recs.forEach(r => { const n = bySeq[r.seq]; if (n && path[path.length - 1] !== n) path.push(n); });
+  return { stops: L, path, unresolved, packages: recs.length };
+}
+function analyse(R) {
+  const by = {}; R.stops.forEach(s => by[s.stop] = s);
+  const cnt = (f, w = () => 1) => { const m = {}; R.stops.forEach(s => { const k = f(s); m[k] = (m[k] || 0) + w(s); }); return Object.entries(m).sort((a, b) => b[1] - a[1]); };
+  const legs = []; for (let i = 1; i < R.path.length; i++) { const a = by[R.path[i - 1]], b = by[R.path[i]]; legs.push({ a: a.stop, b: b.stop, km: hav([a.lat, a.lon], [b.lat, b.lon]) }); }
+  const segs = []; R.path.forEach(n => { const st = by[n].street + ' (' + by[n].municipality + ')'; if (!segs.length || segs[segs.length - 1].k !== st) segs.push({ k: st, ns: [n] }); else segs[segs.length - 1].ns.push(n); });
+  const sv = {}; segs.forEach(g => (sv[g.k] = sv[g.k] || []).push(g.ns.map(n => by[n].label).join(', ')));
+  const zsegs = []; R.path.forEach(n => { const z = by[n].zone; if (!zsegs.length || zsegs[zsegs.length - 1] !== z) zsegs.push(z); });
+  const shared = R.stops.filter(s => s.packages.length > 1);
+  return {
+    packages: R.packages, located: R.stops.reduce((a, s) => a + s.packages.length, 0), stops: R.stops.length, shared: shared.length,
+    sharedPk: shared.reduce((a, s) => a + s.packages.length, 0), unitLevel: R.stops.reduce((a, s) => a + Math.max(1, s.units.length), 0),
+    byMuni: cnt(s => s.municipality), pkByMuni: Object.fromEntries(cnt(s => s.municipality, s => s.packages.length)),
+    byZone: cnt(s => s.zone), byStreet: cnt(s => s.street + ' (' + s.municipality + ')'), pkByStreet: Object.fromEntries(cnt(s => s.street + ' (' + s.municipality + ')', s => s.packages.length)),
+    straightKm: legs.reduce((a, l) => a + l.km, 0), legs, splitStreets: Object.entries(sv).filter(([, v]) => v.length > 1),
+    zoneChanges: zsegs.length - 1, revisited: R.stops.filter(s => s.split).map(s => [s.address, s.label]),
+    biggest: [...R.stops].sort((a, b) => b.packages.length - a.packages.length).slice(0, 6).map(s => [s.address, s.label, s.packages.length]),
+    first: by[R.path[0]], last: by[R.path[R.path.length - 1]],
+  };
+}
+
+// ---------- Driving route (OSRM on OpenStreetMap roads) ----------
+const OSRM = 'https://router.project-osrm.org';
+async function snapStops(stops, onProgress) {
+  let done = 0;
+  await pool(stops, 3, async s => {
+    try {
+      const d = await getJSON(`${OSRM}/nearest/v1/driving/${s.lon.toFixed(6)},${s.lat.toFixed(6)}?number=12`);
+      const want = coreToks(s.street).join(' ');
+      let w = (d.waypoints || []).find(w => w.name && (coreToks(w.name).join(' ') === want || coreToks(w.name).join(' ').includes(want) || want.includes(coreToks(w.name).join(' ')) && coreToks(w.name).length));
+      w = w || (d.waypoints || [])[0];
+      s.snap = w ? w.location : [s.lon, s.lat];
+    } catch (e) { s.snap = [s.lon, s.lat]; }
+    onProgress && onProgress(++done, stops.length);
+  });
+}
+async function drivingRoute(stops, path) {
+  const by = {}; stops.forEach(s => by[s.stop] = s);
+  const pts = path.map(n => by[n].snap || [by[n].lon, by[n].lat]);
+  let km = 0, min = 0; const geom = [], legs = [];
+  for (let i = 0; i < pts.length - 1;) {
+    const ch = pts.slice(i, i + 80);
+    const d = await getJSON(`${OSRM}/route/v1/driving/${ch.map(p => p[0].toFixed(6) + ',' + p[1].toFixed(6)).join(';')}?overview=full&geometries=geojson&continue_straight=false`);
+    if (d.code !== 'Ok') throw new Error(d.message || d.code);
+    const r = d.routes[0]; km += r.distance / 1000; min += r.duration / 60;
+    r.geometry.coordinates.forEach(c => { const l = geom[geom.length - 1]; if (!l || l[0] !== c[0] || l[1] !== c[1]) geom.push([+c[0].toFixed(5), +c[1].toFixed(5)]); });
+    r.legs.forEach(l => legs.push(l.distance / 1000));
+    i += ch.length - 1;
+  }
+  return { km, min, geom, legs };
+}
+async function pool(arr, n, fn) {
+  let i = 0; const run = async () => { while (i < arr.length) { const k = i++; await fn(arr[k], k); } };
+  await Promise.all(Array.from({ length: Math.min(n, arr.length) }, run));
+}
+if (typeof module !== 'undefined') module.exports = { parseManifest, splitAddress, geocodeAddress, buildStops, analyse, snapStops, drivingRoute, pool, toks, seqLabel };
+/*CORE-END*/
+
+</script>
+<script>
+// ======================= UI =======================
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const norm = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } } };
+const PALETTE = ['#188038', '#e8710a', '#d93025', '#9334e6', '#129eaf', '#b06000', '#e52592', '#0d652d', '#5f6368', '#c5221f'];
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+let ROUTES = null, STATE = null, map = null, markers = {}, ZC = {}, hiddenZones = new Set(), placingSeq = null, satOn = false;
+
+// ---------- start screen ----------
+const drop = $('drop'), fileIn = $('file');
+fileIn.onchange = () => fileIn.files[0] && loadPdf(fileIn.files[0]);
+['dragover', 'dragenter'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', ev => { const f = ev.dataTransfer.files[0]; if (f) loadPdf(f); });
+function progress(title, frac, log) { $('prog').hidden = false; if (title != null) $('ptitle').textContent = title; if (frac != null) $('pbar').style.width = Math.round(frac * 100) + '%'; if (log != null) $('plog').textContent = log; }
+async function loadPdf(f) {
+  $('pick').hidden = true; $('resume').hidden = true;
+  drop.querySelector('b').textContent = f.name; drop.querySelector('b').nextSibling.textContent = ' · tap to load another manifest';
+  progress('Reading ' + f.name + '…', 0, '');
+  try {
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+    ROUTES = await parseManifest(pdfjsLib, doc, (p, n) => progress(null, p / n, `Page ${p} / ${n}`));
+    ROUTES = ROUTES.filter(r => r.records.length);
+    $('prog').hidden = true; showRoutes();
+  } catch (e) { progress('Could not read this PDF', 0, String(e)); }
+}
+function showRoutes() {
+  $('pick').hidden = false;
+  const render = () => {
+    const q = norm($('rfilter').value);
+    $('routes').innerHTML = ROUTES.filter(r => norm(r.name).includes(q)).map(r =>
+      `<div class="r" data-n="${esc(r.name)}"><b>${esc(r.name)}</b><span>${r.records.length} packages · p. ${r.pages[0]}${r.pages.length > 1 ? '–' + r.pages[r.pages.length - 1] : ''}</span></div>`).join('') || '<div style="padding:14px;color:#5f6368">No route found</div>';
+    $('routes').querySelectorAll('.r').forEach(el => el.onclick = () => buildRoute(ROUTES.find(r => r.name === el.dataset.n)));
+  };
+  $('rfilter').oninput = render; render();
+}
+async function buildRoute(R) {
+  $('pick').hidden = true; $('rfilter').value = '';
+  const cache = store.get('rm_geo') || {};
+  const uniq = [...new Set(R.records.map(r => r.address))];
+  let done = 0; const geo = {};
+  progress(`Route ${R.name}: finding ${uniq.length} addresses`, 0, 'Adresses Québec (official register)…');
+  await pool(uniq, 4, async a => {
+    if (cache[a] && cache[a].ok) geo[a] = cache[a];
+    else { try { geo[a] = await geocodeAddress(a); } catch (e) { geo[a] = { ok: false, reason: 'Network error: ' + e.message }; } if (geo[a].ok) cache[a] = geo[a]; }
+    done++; progress(null, done / uniq.length * 0.6, `${done} / ${uniq.length} addresses`);
+  });
+  store.set('rm_geo', cache);
+  const res = buildStops(R.records, geo);
+  progress('Calculating the driving route', 0.62, 'Matching stops to their street…');
+  let drive = null;
+  try {
+    await snapStops(res.stops, (d, n) => progress(null, 0.62 + d / n * 0.3, `Street matching ${d} / ${n}`));
+    progress(null, 0.93, 'Road route (OpenStreetMap / OSRM)…');
+    drive = await drivingRoute(res.stops, res.path);
+  } catch (e) { drive = null; console.warn(e); }
+  STATE = { name: R.name, date: new Date().toISOString(), ...res, drive, placed: {} };
+  store.set('rm_last', STATE);
+  $('start').style.display = 'none'; $('prog').hidden = true;
+  showMap();
+}
+$('newbtn').onclick = () => { $('start').style.display = 'flex'; if (ROUTES) showRoutes(); };
+// resume last route
+(function () {
+  const last = store.get('rm_last');
+  if (last && last.stops) {
+    $('resume').hidden = false;
+    $('resume').innerHTML = `<button class="btn pri" id="rbtn">Open last map: ${esc(last.name)} (${last.stops.length} stops)</button>`;
+    $('rbtn').onclick = () => { STATE = last; $('start').style.display = 'none'; showMap(); };
+  }
+})();
+
+// ---------- Google-like map style ----------
+const G = { land: '#f5f5f3', resid: '#ececec', park: '#c7e9c0', wood: '#bfe3b4', water: '#a8d2f7', bldg: '#e6e6e6', bldgLine: '#d6d6d6',
+  minor: '#ffffff', minorCase: '#d9dce0', sec: '#ffffff', secCase: '#c4c8cd', prim: '#fde293', primCase: '#ebc354', mw: '#fbc65a', mwCase: '#e0a33a',
+  rail: '#c6c9ce', path: '#d8dadd', text: '#5f6368', place: '#3c4043', waterText: '#1967d2', parkText: '#188038', bound: '#9aa0a6' };
+function googleize(style) {
+  const setP = (l, k, v) => { l.paint = l.paint || {}; l.paint[k] = v; };
+  style.layers = style.layers.filter(l => !['natural_earth', 'building-3d', 'landcover_wetland', 'road_area_pattern'].includes(l.id));
+  for (const l of style.layers) {
+    const id = l.id;
+    if (id === 'background') setP(l, 'background-color', G.land);
+    else if (id === 'park') { setP(l, 'fill-color', G.park); setP(l, 'fill-opacity', 0.9); setP(l, 'fill-outline-color', G.park); }
+    else if (id === 'park_outline') setP(l, 'line-color', 'rgba(0,0,0,0)');
+    else if (id === 'landuse_residential') { setP(l, 'fill-color', G.resid); setP(l, 'fill-opacity', 0.5); }
+    else if (id === 'landcover_wood') { setP(l, 'fill-color', G.wood); setP(l, 'fill-opacity', 0.6); }
+    else if (id === 'landcover_grass') { setP(l, 'fill-color', G.park); setP(l, 'fill-opacity', 0.5); }
+    else if (id === 'landuse_cemetery') setP(l, 'fill-color', '#d4ead2');
+    else if (id === 'landuse_hospital') setP(l, 'fill-color', '#fbe3e1');
+    else if (id === 'landuse_school') setP(l, 'fill-color', '#f1ece0');
+    else if (/^landuse_(pitch|track)$/.test(id)) setP(l, 'fill-color', '#cdebc5');
+    else if (id === 'water') setP(l, 'fill-color', G.water);
+    else if (/^waterway/.test(id) && l.type === 'line') setP(l, 'line-color', G.water);
+    else if (id === 'building') { setP(l, 'fill-color', G.bldg); setP(l, 'fill-outline-color', G.bldgLine); }
+    else if (/^aeroway/.test(id)) setP(l, l.type === 'fill' ? 'fill-color' : 'line-color', '#e3e5e8');
+    else if (l['source-layer'] === 'transportation' && l.type === 'line') {
+      const cas = /casing/.test(id);
+      let c;
+      if (/motorway/.test(id)) c = cas ? G.mwCase : G.mw;
+      else if (/trunk_primary/.test(id)) c = cas ? G.primCase : G.prim;
+      else if (/secondary_tertiary/.test(id)) c = cas ? G.secCase : G.sec;
+      else if (/rail/.test(id)) c = G.rail;
+      else if (/path|pedestrian/.test(id)) c = G.path;
+      else c = cas ? G.minorCase : G.minor;
+      setP(l, 'line-color', c);
+      if (/^tunnel/.test(id)) setP(l, 'line-opacity', 0.6);
+    }
+    else if (/^boundary/.test(id)) setP(l, 'line-color', G.bound);
+    else if (l.type === 'symbol') {
+      const lay = l['source-layer'];
+      const col = lay === 'transportation_name' ? G.text : (lay === 'place' ? G.place : (/water/.test(lay || '') ? G.waterText : '#70757a'));
+      if (!/shield/.test(id)) { setP(l, 'text-color', col); setP(l, 'text-halo-color', '#ffffff'); setP(l, 'text-halo-width', 1.6); }
+      if (lay === 'poi') { l.layout = l.layout || {}; l.minzoom = Math.max(l.minzoom || 0, 15); }
+    }
+  }
+  return style;
+}
+
+// ---------- map ----------
+async function showMap() {
+  const S = STATE.stops, A = analyse(STATE);
+  STATE.analysis = A;
+  ZC = {}; [...new Set(S.map(s => s.zone))].forEach((z, i) => ZC[z] = PALETTE[i % PALETTE.length]);
+  $('rn').textContent = STATE.name;
+  $('rsub').textContent = `${Object.keys(A.pkByMuni).join(' · ')}`;
+  $('k1').textContent = A.packages; $('k2').textContent = A.stops; $('k3').textContent = A.shared;
+  $('k4').textContent = STATE.drive ? STATE.drive.km.toFixed(1) : '–';
+  const issues = STATE.unresolved.length + S.filter(s => s.flags.length).length;
+  $('icount').textContent = issues ? `(${issues})` : '';
+  renderZones(); renderList(''); renderAnalysis(A); renderIssues();
+  if (map) { map.remove(); map = null; markers = {}; }
+  let style;
+  try { style = googleize(await (await fetch('https://tiles.openfreemap.org/styles/liberty')).json()); }
+  catch (e) { style = { version: 8, sources: { osm: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, attribution: 'Esri' } }, layers: [{ id: 'osm', type: 'raster', source: 'osm' }] }; }
+  map = new maplibregl.Map({ container: 'map', style, bounds: boundsOf(S), fitBoundsOptions: { padding: 40 }, attributionControl: false });
+  map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+  map.once('idle', () => document.querySelectorAll('.maplibregl-compact-show').forEach(e => e.classList.remove('maplibregl-compact-show')));
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+  map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+  map.on('load', () => {
+    const firstRoad = (map.getStyle().layers.find(l => /^(tunnel|road|bridge)_/.test(l.id)) || {}).id;
+    map.addSource('sat', { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri' });
+    map.addLayer({ id: 'sat', type: 'raster', source: 'sat', layout: { visibility: 'none' } }, firstRoad);
+    const by = {}; S.forEach(s => by[s.stop] = s);
+    map.addSource('straight', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: STATE.path.map(n => [by[n].lon, by[n].lat]) } } });
+    map.addLayer({ id: 'straight', type: 'line', source: 'straight', layout: { visibility: 'none' }, paint: { 'line-color': '#202124', 'line-width': 1.6, 'line-dasharray': [3, 3], 'line-opacity': .7 } });
+    if (STATE.drive) {
+      map.addSource('drive', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: STATE.drive.geom } } });
+      map.addLayer({ id: 'drive-case', type: 'line', source: 'drive', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#1557b0', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 4, 16, 10], 'line-opacity': .85 } });
+      map.addLayer({ id: 'drive', type: 'line', source: 'drive', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#4285f4', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 2.5, 16, 7], 'line-opacity': .9 } });
+      const c = document.createElement('canvas'); c.width = c.height = 24; const x = c.getContext('2d');
+      x.strokeStyle = '#fff'; x.lineWidth = 3.5; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath(); x.moveTo(8, 6); x.lineTo(16, 12); x.lineTo(8, 18); x.stroke();
+      map.addImage('chev', { width: 24, height: 24, data: x.getImageData(0, 0, 24, 24).data });
+      map.addLayer({ id: 'arrows', type: 'symbol', source: 'drive', layout: { 'symbol-placement': 'line', 'symbol-spacing': 90, 'icon-image': 'chev', 'icon-size': ['interpolate', ['linear'], ['zoom'], 10, .45, 16, .8], 'icon-allow-overlap': true, 'icon-ignore-placement': true } });
+    } else { $('optLine').checked = true; map.setLayoutProperty('straight', 'visibility', 'visible'); }
+  });
+  map.on('click', e => { if (placingSeq != null) finishPlacing(e.lngLat); });
+  addMarkers();
+}
+function boundsOf(S) { const b = new maplibregl.LngLatBounds(); S.forEach(s => b.extend([s.lon, s.lat])); if (!S.length) b.extend([-73.6, 45.5]).extend([-72.9, 45.7]); return b; }
+function popupHtml(s) {
+  const q = encodeURIComponent(`${s.address}, ${s.municipality}, QC ${s.postal}`);
+  return `<div class="pop"><h4>${esc(s.address)}</h4><div>${esc(s.municipality)}, QC ${esc(s.postal)}</div>
+  <div style="margin:5px 0">Stop <b>#${s.stop}</b> / ${STATE.stops.length} · Order <b>${esc(s.label)}</b> · <b>${s.packages.length}</b> pkg${s.packages.length > 1 ? 's' : ''}</div>
+  ${s.units.length ? `<div>Units: <b>${s.units.map(esc).join(', ')}</b></div>` : ''}
+  ${s.flags.map(f => `<div class="flag">⚠ ${esc(f)}</div>`).join('')}${s.notes.map(f => `<div style="font-size:12px;color:#5f6368">ℹ ${esc(f)}</div>`).join('')}
+  <table>${s.packages.map(p => `<tr><td><b>${p.seq}</b></td><td>${esc(p.tracking)}${p.unit ? ' · unit ' + esc(p.unit) : ''}</td></tr>`).join('')}</table>
+  <div class="links"><a target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}">Navigate (Google)</a><a target="_blank" rel="noopener" href="https://maps.apple.com/?daddr=${s.lat},${s.lon}&q=${q}">Apple Maps</a></div></div>`;
+}
+function addMarkers() {
+  Object.values(markers).forEach(m => m.remove()); markers = {};
+  const S = STATE.stops, first = STATE.path[0], last = STATE.path[STATE.path.length - 1];
+  [...S].sort((a, b) => a.packages.length - b.packages.length).forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'pin' + (s.packages.length > 1 ? ' multi' : '') + (s.flags.length ? ' flagged' : '') + (s.stop === first ? ' first' : '') + (s.stop === last ? ' last' : '');
+    el.style.background = ZC[s.zone] || '#5f6368'; el.textContent = s.label;
+    const m = new maplibregl.Marker({ element: el }).setLngLat([s.lon, s.lat]).setPopup(new maplibregl.Popup({ offset: 14, maxWidth: '310px' }).setHTML(popupHtml(s))).addTo(map);
+    m.zone = s.zone; markers[s.stop] = m;
+    if (hiddenZones.has(s.zone)) el.style.display = 'none';
+  });
+}
+function focusStop(s) {
+  if (hiddenZones.has(s.zone)) { hiddenZones.delete(s.zone); renderZones(); applyZones(); }
+  map.flyTo({ center: [s.lon, s.lat], zoom: Math.max(map.getZoom(), 16.5), speed: 1.6 });
+  Object.values(markers).forEach(m => m.getPopup().isOpen() && m.togglePopup());
+  setTimeout(() => markers[s.stop].togglePopup(), 350);
+  if (innerWidth <= 760) { $('side').classList.add('min'); $('toggle').textContent = 'List'; }
+}
+// ---------- sidebar ----------
+function renderZones() {
+  const S = STATE.stops;
+  $('zones').innerHTML = Object.entries(ZC).map(([z, c]) => `<label><input type="checkbox" data-z="${esc(z)}" ${hiddenZones.has(z) ? '' : 'checked'}><span class="sw" style="background:${c}"></span>${esc(z)} (${S.filter(s => s.zone === z).length})</label>`).join('');
+  $('zones').querySelectorAll('input').forEach(i => i.onchange = () => { i.checked ? hiddenZones.delete(i.dataset.z) : hiddenZones.add(i.dataset.z); applyZones(); });
+}
+function applyZones() { Object.values(markers).forEach(m => m.getElement().style.display = hiddenZones.has(m.zone) ? 'none' : ''); }
+function renderList(q) {
+  q = norm(q.trim()); let rows = STATE.stops;
+  if (q) {
+    const num = /^\d+$/.test(q) ? +q : null;
+    const score = s => (num !== null && s.seqs.includes(num)) ? 3 : norm(s.address + ' ' + s.municipality).includes(q) ? 2 : s.packages.some(p => norm(p.manifest).includes(q)) ? 1.5 : s.packages.some(p => norm(p.tracking).includes(q)) ? 1 : 0;
+    rows = rows.map(s => [score(s), s]).filter(x => x[0] > 0).sort((a, b) => b[0] - a[0] || a[1].stop - b[1].stop).map(x => x[1]);
+  }
+  $('list').innerHTML = rows.length ? rows.map(s => `<div class="item" data-s="${s.stop}"><div class="n" style="background:${ZC[s.zone]}">${esc(s.label)}</div><div><div class="a">${esc(s.address)}</div><div class="m">Stop #${s.stop} · ${esc(s.municipality)} · ${s.packages.length} pkg${s.packages.length > 1 ? 's' : ''}${s.units.length ? ' · units ' + s.units.map(esc).join(', ') : ''}</div>${s.flags.length ? '<div class="m flag">⚠ verify address</div>' : ''}</div></div>`).join('') : '<div class="sec" style="color:#5f6368">No matching stop.</div>';
+  $('list').querySelectorAll('.item').forEach(el => el.onclick = () => focusStop(STATE.stops.find(s => s.stop === +el.dataset.s)));
+  return rows;
+}
+$('search').oninput = () => renderList($('search').value);
+$('search').onkeydown = e => { if (e.key === 'Enter') { const r = renderList($('search').value); if (r.length) focusStop(r[0]); } };
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  ['list', 'analysis', 'issues'].forEach(t => $(t).hidden = b.dataset.t !== t);
+});
+$('toggle').onclick = () => { const sd = $('side'); sd.classList.toggle('min'); $('toggle').textContent = sd.classList.contains('min') ? 'List' : 'Hide'; setTimeout(() => map && map.resize(), 60); };
+const vis = (id, on) => map && map.getLayer(id) && map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+$('optDrive').onchange = e => { vis('drive', e.target.checked); vis('drive-case', e.target.checked); };
+$('optArrows').onchange = e => vis('arrows', e.target.checked);
+$('optLine').onchange = e => vis('straight', e.target.checked);
+$('bSat').onclick = () => { satOn = !satOn; vis('sat', satOn); $('bSat').classList.toggle('on', satOn); $('bSat').textContent = satOn ? 'Map' : 'Satellite'; };
+$('bFit').onclick = () => map.fitBounds(boundsOf(STATE.stops), { padding: 40 });
+$('bLoc').onclick = () => navigator.geolocation && navigator.geolocation.getCurrentPosition(p => {
+  const ll = [p.coords.longitude, p.coords.latitude];
+  if (!window.meMarker) { const el = document.createElement('div'); el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)'; window.meMarker = new maplibregl.Marker({ element: el }).setLngLat(ll).addTo(map); }
+  else window.meMarker.setLngLat(ll);
+  map.flyTo({ center: ll, zoom: 16 });
+}, () => alert('Location not available'));
+function tbl(rows, h) { return `<table><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td${typeof c === 'number' ? ' class="r"' : ''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`; }
+function renderAnalysis(A) {
+  const by = {}; STATE.stops.forEach(s => by[s.stop] = s);
+  const roadLegs = STATE.drive ? STATE.drive.legs : null;
+  const legs = A.legs.map((l, i) => ({ ...l, road: roadLegs ? roadLegs[i] : null })).sort((a, b) => (b.road ?? b.km) - (a.road ?? a.km)).slice(0, 8);
+  $('anbody').innerHTML = `
+  <div class="note"><b>Driving distance: ${STATE.drive ? STATE.drive.km.toFixed(1) + ' km' : 'not available (routing service unreachable)'}</b> through all stops in manifest order, on OpenStreetMap roads (OSRM). Trips from and back to the depot are not included. The straight-line total is ${A.straightKm.toFixed(1)} km.</div>
+  <h3>Packages vs stops</h3>${tbl([['Packages', A.packages], ['Placed on map', A.located], ['Physical stops (buildings)', A.stops], ['Stops with 2+ packages', A.shared], ['Packages at shared stops', A.sharedPk], ['Stops if each unit counted', A.unitLevel]], ['', ''])}
+  <h3>Biggest stops</h3>${tbl(A.biggest, ['Address', 'Seq', 'Pkgs'])}
+  <h3>Stops per municipality</h3>${tbl(A.byMuni.map(([m, n]) => [m, n, A.pkByMuni[m]]), ['Municipality', 'Stops', 'Pkgs'])}
+  <h3>By area</h3>${tbl(A.byZone, ['Area', 'Stops'])}
+  <h3>By street</h3>${tbl(A.byStreet.map(([k, n]) => [k, n, A.pkByStreet[k]]), ['Street', 'Stops', 'Pkgs'])}
+  <h3>First and last</h3>${tbl([['First', A.first ? A.first.address + ', ' + A.first.municipality : '–'], ['Last', A.last ? A.last.address + ', ' + A.last.municipality : '–']], ['', ''])}
+  <h3>Efficiency</h3><p>The route changes area <b>${A.zoneChanges}</b> times. ${A.splitStreets.length} streets are visited in more than one separate run${A.revisited.length ? `, and ${A.revisited.length} stop(s) are visited twice` : ''}.</p>
+  <h3>Longest moves between consecutive stops</h3>${tbl(legs.map(l => [`${by[l.a].label} → ${by[l.b].label}`, `${by[l.a].address} → ${by[l.b].address}`, (l.road != null ? l.road.toFixed(1) + ' km road' : l.km.toFixed(1) + ' km line')]), ['Seq', 'From → to', 'Distance'])}
+  <h3>Back-and-forth: streets visited in separate runs</h3>${A.splitStreets.length ? tbl(A.splitStreets.map(([k, v]) => [k, v.join('  |  ')]), ['Street', 'Runs (seq)']) : '<p>None</p>'}
+  ${A.revisited.length ? `<h3>Same stop visited twice</h3>${tbl(A.revisited, ['Address', 'Seq'])}` : ''}`;
+}
+function renderIssues() {
+  const fl = STATE.stops.filter(s => s.flags.length);
+  $('issues').innerHTML = `
+  <h3>Not placed (${STATE.unresolved.length})</h3>
+  ${STATE.unresolved.length ? STATE.unresolved.map(u => `<div class="warn"><b>Seq ${u.seq}</b>: ${esc(u.address)}<br><span style="color:#5f6368">${esc(u.reason)}</span><br><button class="btn" data-place="${u.seq}" style="margin-top:6px">Place it on the map</button></div>`).join('') : '<p>All addresses were found.</p>'}
+  <h3>To verify (${fl.length})</h3>
+  ${fl.length ? fl.map(s => `<div class="item" data-s="${s.stop}"><div class="n" style="background:${ZC[s.zone]}">${esc(s.label)}</div><div><div class="a">${esc(s.address)}</div>${s.flags.map(f => `<div class="m">${esc(f)}</div>`).join('')}</div></div>`).join('') : '<p>None</p>'}
+  <p style="font-size:12px;color:#5f6368">Positions come from Adresses Québec (Government of Québec). "Inferred" means the manifest address was incomplete or wrong and the only matching address was used.</p>`;
+  $('issues').querySelectorAll('[data-place]').forEach(b => b.onclick = () => startPlacing(+b.dataset.place));
+  $('issues').querySelectorAll('.item').forEach(el => el.onclick = () => focusStop(STATE.stops.find(s => s.stop === +el.dataset.s)));
+}
+// manual placement of unresolved addresses
+function startPlacing(seq) { placingSeq = seq; $('placing').style.display = 'block'; map.getCanvas().style.cursor = 'crosshair'; if (innerWidth <= 760) { $('side').classList.add('min'); $('toggle').textContent = 'List'; } }
+function finishPlacing(ll) {
+  const u = STATE.unresolved.find(x => x.seq === placingSeq); placingSeq = null; $('placing').style.display = 'none'; map.getCanvas().style.cursor = '';
+  if (!u) return;
+  const { body, muni, postal } = splitAddress(u.address);
+  STATE.unresolved = STATE.unresolved.filter(x => x !== u);
+  const st = { stop: STATE.stops.length + 1, address: body, street: body.replace(/^\d+\s*/, ''), municipality: muni, postal: postal.replace(/^(...)(...)$/, '$1 $2'), zone: 'Placed by hand', lat: ll.lat, lon: ll.lng, official: '', method: 'manual', seqs: [u.seq], packages: [{ seq: u.seq, tracking: u.tracking, code: u.code, manifest: u.address, unit: '' }], units: [], flags: [`Seq ${u.seq}: placed by hand on the map`], notes: [], label: String(u.seq), split: false };
+  STATE.stops.push(st);
+  STATE.path = rebuildPath();
+  store.set('rm_last', STATE);
+  if (!ZC['Placed by hand']) ZC['Placed by hand'] = '#5f6368';
+  STATE.analysis = analyse(STATE); renderZones(); renderList($('search').value); renderAnalysis(STATE.analysis); renderIssues(); addMarkers();
+  $('k2').textContent = STATE.stops.length;
+}
+function rebuildPath() { const bySeq = {}; STATE.stops.forEach(s => s.seqs.forEach(q => bySeq[q] = s.stop)); const p = []; Object.keys(bySeq).map(Number).sort((a, b) => a - b).forEach(q => { const n = bySeq[q]; if (p[p.length - 1] !== n) p.push(n); }); return p; }
+// ---------- exports ----------
+function download(name, text, type) { const b = new Blob([text], { type }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+const csvq = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+$('exStops').onclick = () => download(`${STATE.name}_stops.csv`, '﻿' + [['Stop', 'Seq', 'Packages', 'Address', 'Municipality', 'Postal', 'Units', 'Area', 'Latitude', 'Longitude', 'Official register', 'Tracking', 'Verify']].concat(STATE.stops.map(s => [s.stop, s.label, s.packages.length, s.address, s.municipality, s.postal, s.units.join('; '), s.zone, s.lat.toFixed(7), s.lon.toFixed(7), s.official, s.packages.map(p => p.tracking).join('; '), s.flags.join(' | ')])).map(r => r.map(csvq).join(',')).join('\n'), 'text/csv');
+$('exPk').onclick = () => { const rows = []; STATE.stops.forEach(s => s.packages.forEach(p => rows.push([p.seq, s.stop, p.tracking, p.code, p.manifest, s.address, p.unit, s.municipality, s.lat.toFixed(7), s.lon.toFixed(7)]))); STATE.unresolved.forEach(u => rows.push([u.seq, '', u.tracking, u.code, u.address, 'NOT FOUND', '', '', '', ''])); rows.sort((a, b) => a[0] - b[0]); download(`${STATE.name}_packages.csv`, '﻿' + [['Seq', 'Stop', 'Tracking', 'Code', 'Manifest address', 'Address', 'Unit', 'Municipality', 'Latitude', 'Longitude']].concat(rows).map(r => r.map(csvq).join(',')).join('\n'), 'text/csv'); };
+$('exKml').onclick = () => {
+  const x = s => String(s ?? '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const abgr = h => 'ff' + h.slice(5, 7) + h.slice(3, 5) + h.slice(1, 3);
+  const icon = 'https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png';
+  let k = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${x(STATE.name)}</name>`;
+  Object.entries(ZC).forEach(([z, c], i) => k += `<Style id="z${i}"><IconStyle><color>${abgr(c)}</color><Icon><href>${icon}</href></Icon></IconStyle></Style>`);
+  k += `<Style id="rt"><LineStyle><color>ffe8731a</color><width>4</width></LineStyle></Style><Folder><name>Stops</name>`;
+  const zi = Object.keys(ZC);
+  STATE.stops.forEach(s => k += `<Placemark><name>${x(s.label)}</name><description><![CDATA[Stop #${s.stop} · ${s.packages.length} pkg<br>${x(s.address)}, ${x(s.municipality)}<br>${s.units.length ? 'Units: ' + x(s.units.join(', ')) + '<br>' : ''}${s.packages.map(p => 'Seq ' + p.seq + ': ' + x(p.tracking)).join('<br>')}${s.flags.length ? '<br>⚠ ' + x(s.flags.join(' | ')) : ''}]]></description><styleUrl>#z${zi.indexOf(s.zone)}</styleUrl><Point><coordinates>${s.lon},${s.lat},0</coordinates></Point></Placemark>`);
+  k += `</Folder>`;
+  if (STATE.drive) k += `<Placemark><name>Driving route ${STATE.drive.km.toFixed(1)} km</name><styleUrl>#rt</styleUrl><LineString><tessellate>1</tessellate><coordinates>${STATE.drive.geom.map(c => c[0] + ',' + c[1] + ',0').join(' ')}</coordinates></LineString></Placemark>`;
+  k += `</Document></kml>`;
+  download(`${STATE.name}_mymaps.kml`, k, 'application/vnd.google-earth.kml+xml');
+};
+</script>
+</body>
+</html>
