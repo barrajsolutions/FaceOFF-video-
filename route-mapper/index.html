@@ -716,7 +716,7 @@ $('optDrive').onchange = e => { vis('drive', e.target.checked); vis('drive-case'
 $('optArrows').onchange = e => vis('arrows', e.target.checked);
 $('optLine').onchange = e => vis('straight', e.target.checked);
 $('bSat').onclick = () => { satOn = !satOn; vis('sat', satOn); $('bSat').classList.toggle('on', satOn); $('bSat').textContent = satOn ? 'Map' : 'Satellite'; };
-$('bFit').onclick = () => { const b = boundsOf(STATE.stops); if (STATE.depotLeg) b.extend([STATE.depotLeg.depot.lon, STATE.depotLeg.depot.lat]); map.fitBounds(b, { padding: 40 }); };
+$('bFit').onclick = () => { const b = boundsOf(STATE.stops); if (STATE.depotLeg) b.extend([STATE.depotLeg.depot.lon, STATE.depotLeg.depot.lat]); map.fitBounds(b, { padding: { top: 70, bottom: 40, left: 90, right: 60 } }); };
 $('bLoc').onclick = () => navigator.geolocation && navigator.geolocation.getCurrentPosition(p => {
   const ll = [p.coords.longitude, p.coords.latitude];
   if (!window.meMarker) { const el = document.createElement('div'); el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)'; window.meMarker = new maplibregl.Marker({ element: el }).setLngLat(ll).addTo(map); }
@@ -771,7 +771,9 @@ function finishPlacing(ll) {
 }
 function rebuildPath() { const bySeq = {}; STATE.stops.forEach(s => s.seqs.forEach(q => bySeq[q] = s.stop)); const p = []; Object.keys(bySeq).map(Number).sort((a, b) => a - b).forEach(q => { const n = bySeq[q]; if (p[p.length - 1] !== n) p.push(n); }); return p; }
 // ---------- warehouse (start point) ----------
-let DEPOT = store.get('rm_depot'), depotMarker = null;
+const DEFAULT_DEPOT = { text: '131-B Bd Montcalm N, Candiac, QC J5R 0S1', lat: 45.3975944, lon: -73.5199471, label: 'Intelcom Candiac, 131-B boul. Montcalm Nord, Candiac J5R 0S1' };
+let DEPOT = store.get('rm_depot') || DEFAULT_DEPOT, depotMarker = null;
+const isDefaultDepot = () => DEPOT && DEPOT.lat === DEFAULT_DEPOT.lat && DEPOT.lon === DEFAULT_DEPOT.lon;
 async function geocodeFree(text) {
   const nums = text.match(/\d+/g) || [];
   const cands = await aq(text, 6);
@@ -782,7 +784,7 @@ async function geocodeFree(text) {
   return null;
 }
 function depotForm(box, id) {
-  box.innerHTML = `<div class="depot"><label for="${id}">Warehouse (every route starts here)</label><div class="row"><input id="${id}" type="text" autocomplete="street-address" placeholder="Number, street, city" value="${esc(DEPOT ? DEPOT.text : '')}"><button class="btn pri" type="button" id="${id}-save">Save</button></div><div class="dmsg ${DEPOT ? 'ok' : ''}" id="${id}-msg">${DEPOT ? '✓ ' + esc(DEPOT.label) : 'Not set yet. Type the warehouse address and tap Save.'}</div></div>`;
+  box.innerHTML = `<div class="depot"><label for="${id}">Warehouse: every route starts here</label><div class="row"><input id="${id}" type="text" autocomplete="street-address" placeholder="Number, street, city" value="${esc(DEPOT ? DEPOT.text : '')}"><button class="btn pri" type="button" id="${id}-save">Save</button></div><div class="dmsg ${DEPOT ? 'ok' : ''}" id="${id}-msg">${DEPOT ? '✓ ' + esc(DEPOT.label) : 'Not set yet. Type the warehouse address and tap Save.'}</div>${isDefaultDepot() ? '' : `<button class="btn" type="button" id="${id}-reset" style="margin-top:8px">Use Intelcom Candiac</button>`}</div>`;
   const save = async () => {
     const t = $(id).value.trim(), msg = $(id + '-msg');
     if (!t) { msg.className = 'dmsg err'; msg.textContent = 'Type the address first (number, street, city).'; return; }
@@ -797,6 +799,9 @@ function depotForm(box, id) {
     } catch (e) { msg.className = 'dmsg err'; msg.textContent = 'No connection. Try again.'; }
   };
   $(id + '-save').onclick = save; $(id).onkeydown = e => { if (e.key === 'Enter') save(); };
+  const rs = $(id + '-reset');
+  if (rs) rs.onclick = async () => { DEPOT = DEFAULT_DEPOT; try { localStorage.removeItem('rm_depot'); } catch (e) { }
+    ['depotStart', 'anDepot'].forEach(b => $(b) && depotForm($(b), b === 'depotStart' ? 'depotIn1' : 'depotIn2')); if (STATE) await updateDepotLeg(); };
 }
 function depotLegValid() {
   const d = STATE && STATE.depotLeg;
@@ -837,7 +842,7 @@ function drawDepot() {
   const leg = STATE.depotLeg && depotLegValid() ? STATE.depotLeg : null;
   if (depotMarker) { depotMarker.remove(); depotMarker = null; }
   if (!leg) { if (map.getLayer && map.getLayer('depot-line')) map.setLayoutProperty('depot-line', 'visibility', 'none'); return; }
-  const el = document.createElement('div'); el.className = 'wpin'; el.textContent = 'Warehouse';
+  const el = document.createElement('div'); el.className = 'wpin'; el.textContent = isDefaultDepot() ? 'Intelcom Candiac' : 'Warehouse';
   depotMarker = new maplibregl.Marker({ element: el }).setLngLat([leg.depot.lon, leg.depot.lat])
     .setPopup(new maplibregl.Popup({ offset: 14 }).setHTML(`<div class="pop"><h4>Warehouse</h4><div>${esc(leg.depot.label)}</div><div style="margin-top:5px">To the first stop: <b>${leg.km.toFixed(1)} km</b></div></div>`)).addTo(map);
   const draw = () => {
