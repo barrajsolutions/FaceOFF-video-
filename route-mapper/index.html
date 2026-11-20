@@ -71,10 +71,17 @@ header{padding:12px 14px 8px;border-bottom:1px solid var(--line)}
 .bar{height:6px;background:#e8eaed;border-radius:3px;overflow:hidden;margin:10px 0}.bar i{display:block;height:100%;background:var(--blue);width:0;transition:width .2s}
 #plog{font-size:12.5px;color:var(--muted)}
 #toggle{display:none}
+.grab{display:none}
+#mapwrap{min-height:0}
+#startBack{margin-right:2px}
 @media (max-width:760px){
  #app{flex-direction:column-reverse}
- #side{width:100%;height:52%;border-right:0;border-top:1px solid var(--line);box-shadow:0 -2px 8px rgba(0,0,0,.12);border-radius:14px 14px 0 0}
+ #side{width:100%;height:52%;border-right:0;border-top:1px solid var(--line);box-shadow:0 -2px 8px rgba(0,0,0,.12);border-radius:14px 14px 0 0;transition:height .25s ease}
  #side.min{height:auto}#side.min .tabs,#side.min .pane,#side.min .zones,#side.min .opts,#side.min .kpis,#side.min #search{display:none}
+ #side.full{height:100%;border-radius:0;border-top:0;padding-top:env(safe-area-inset-top,0px)}
+ #side.full .zones,#side.full .opts{display:none}
+ .grab{display:block;width:44px;height:5px;border-radius:3px;background:#c4c7cc;margin:0 auto 8px;cursor:pointer}
+ header{touch-action:none}
  #toggle{display:inline-block}
  header{padding:8px 12px 6px}.brand h1{font-size:16px}.rname{display:none}
  .btn{padding:5px 10px;font-size:12.5px}
@@ -92,7 +99,7 @@ header{padding:12px 14px 8px;border-bottom:1px solid var(--line)}
 <body>
 <div id="start">
  <div class="card">
-  <div class="brand"><div class="logo">R</div><h2>Route Mapper</h2></div>
+  <div class="brand"><button class="btn" id="startBack" type="button" hidden>‹ Back</button><div class="logo">R</div><h2>Route Mapper</h2></div>
   <p>Load an Intelcom driver manifest (PDF), choose a route, and get the delivery map: stops grouped, official Québec addresses, driving route and analysis.</p>
   <label class="drop" id="drop"><input type="file" id="file" accept="application/pdf,.pdf" hidden>
    <div style="font-size:30px">📄</div><div><b>Choose manifest PDF</b> or drop it here</div><div style="font-size:12px;color:#5f6368;margin-top:4px">The PDF is read on this device only</div></label>
@@ -107,7 +114,8 @@ header{padding:12px 14px 8px;border-bottom:1px solid var(--line)}
 <div id="app">
  <aside id="side">
   <header>
-   <div class="brand"><div class="logo">R</div><h1>Route <span id="rn"></span></h1><button class="btn" id="toggle" type="button">Hide</button><button class="btn" id="newbtn" type="button">Change route</button></div>
+   <div class="grab" id="grab" title="Drag up for the full list"></div>
+   <div class="brand"><button class="btn" id="backbtn" type="button">‹ Routes</button><h1><span id="rn"></span></h1><button class="btn pri" id="toggle" type="button">Hide</button></div>
    <div class="rname" id="rsub"></div>
    <div class="kpis"><div class="kpi"><b id="k1"></b><span>packages</span></div><div class="kpi"><b id="k2"></b><span>stops</span></div><div class="kpi"><b id="k3"></b><span>shared stops</span></div><div class="kpi"><b id="k4"></b><span>road km</span></div></div>
    <input id="search" type="search" placeholder="Search address, seq # or tracking" autocomplete="off">
@@ -443,7 +451,7 @@ async function loadPdf(f) {
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
     ROUTES = await parseManifest(pdfjsLib, doc, (p, n) => progress(null, p / n, `Page ${p} / ${n}`));
     ROUTES = ROUTES.filter(r => r.records.length);
-    $('prog').hidden = true; showRoutes();
+    $('prog').hidden = true; go('routes');
   } catch (e) { progress('Could not read this PDF', 0, String(e)); }
 }
 function showRoutes() {
@@ -478,17 +486,76 @@ async function buildRoute(R) {
   } catch (e) { drive = null; console.warn(e); }
   STATE = { name: R.name, date: new Date().toISOString(), ...res, drive, placed: {} };
   store.set('rm_last', STATE);
-  $('start').style.display = 'none'; $('prog').hidden = true;
-  showMap();
+  $('prog').hidden = true;
+  showMap(); go('map'); setSheet('half');
 }
-$('newbtn').onclick = () => { $('start').style.display = 'flex'; if (ROUTES) showRoutes(); };
+// ---------- navigation (Back buttons + iPhone back gesture) ----------
+let VIEW = 'upload', depth = 0;
+const phone = () => innerWidth <= 760;
+const PARENT = { full: 'map', map: () => (ROUTES ? 'routes' : 'upload'), routes: 'upload', upload: null };
+function parentOf(v) { const p = PARENT[v]; return typeof p === 'function' ? p() : p; }
+function applyView(v) {
+  if (v === 'routes' && !ROUTES) v = 'upload';
+  if ((v === 'map' || v === 'full') && !STATE) v = ROUTES ? 'routes' : 'upload';
+  VIEW = v;
+  const onStart = v === 'upload' || v === 'routes';
+  $('start').style.display = onStart ? 'flex' : 'none';
+  if (onStart) {
+    $('pick').hidden = v !== 'routes';
+    if (v === 'routes') showRoutes();
+    $('startBack').hidden = !(v === 'routes' || (v === 'upload' && STATE));
+    $('startBack').textContent = v === 'routes' ? '‹ Back' : '‹ Back to map';
+  } else {
+    setSheet(v === 'full' ? 'full' : pendingSheet || (phone() && $('side').classList.contains('min') ? 'min' : 'half')); pendingSheet = null;
+    $('backbtn').textContent = ROUTES ? '‹ Routes' : '‹ Back';
+  }
+}
+const STACK = ['upload']; // mirrors the browser history entries of this app
+function go(v) { applyView(v); history.pushState({ v: VIEW }, ''); STACK.push(VIEW); depth = STACK.length - 1; }
+function back() {
+  if (VIEW === 'upload' && STATE) { go('map'); return; }
+  const target = parentOf(VIEW); if (!target) return;
+  if (STACK.length > 1 && STACK[STACK.length - 2] === target) { history.back(); return; }
+  applyView(target); history.replaceState({ v: VIEW }, ''); STACK[STACK.length - 1] = VIEW;
+}
+window.addEventListener('popstate', e => { if (STACK.length > 1) STACK.pop(); depth = STACK.length - 1; applyView((e.state && e.state.v) || 'upload'); STACK[STACK.length - 1] = VIEW; });
+history.replaceState({ v: 'upload' }, '');
+$('startBack').onclick = back;
+$('backbtn').onclick = () => { if (VIEW === 'full') back(); else back(); };
+// ---------- phone bottom sheet: half / full screen / hidden ----------
+function setSheet(state) {
+  const sd = $('side'); sd.classList.remove('min', 'full');
+  if (phone() && state !== 'half') sd.classList.add(state);
+  $('toggle').textContent = !phone() ? '' : state === 'full' ? 'Map' : state === 'min' ? 'List' : 'Hide';
+  setTimeout(() => map && map.resize(), 280);
+}
+function sheetState() { const c = $('side').classList; return c.contains('full') ? 'full' : c.contains('min') ? 'min' : 'half'; }
+function openFull() { if (phone() && VIEW === 'map' && sheetState() !== 'full') go('full'); }
+let pendingSheet = null;
+function leaveFull(toState) { // from the full list back to the map, without leaving an extra history step
+  if (VIEW === 'full' && STACK.length > 1 && STACK[STACK.length - 2] === 'map') { pendingSheet = toState; history.back(); return; }
+  if (VIEW === 'full') { history.replaceState({ v: 'map' }, ''); VIEW = 'map'; STACK[STACK.length - 1] = 'map'; }
+  setSheet(toState);
+}
+$('toggle').onclick = () => { const st = sheetState(); if (st === 'full') back(); else if (st === 'half') setSheet('min'); else setSheet('half'); };
+$('grab').onclick = () => { const st = sheetState(); if (st === 'half') openFull(); else if (st === 'full') back(); else setSheet('half'); };
+['list', 'analysis', 'issues'].forEach(id => $(id).addEventListener('scroll', e => { if (e.target.scrollTop > 12) openFull(); }, { passive: true }));
+(function () { // swipe up / down on the sheet header
+  let y0 = null; const h = document.querySelector('#side header');
+  h.addEventListener('touchstart', e => { if (!e.target.closest('input,button')) y0 = e.touches[0].clientY; }, { passive: true });
+  h.addEventListener('touchend', e => {
+    if (y0 == null) return; const dy = e.changedTouches[0].clientY - y0; y0 = null; const st = sheetState();
+    if (dy < -40) { if (st === 'min') setSheet('half'); else if (st === 'half') openFull(); }
+    else if (dy > 40) { if (st === 'full') back(); else if (st === 'half') setSheet('min'); }
+  }, { passive: true });
+})();
 // resume last route
 (function () {
   const last = store.get('rm_last');
   if (last && last.stops) {
     $('resume').hidden = false;
     $('resume').innerHTML = `<button class="btn pri" id="rbtn">Open last map: ${esc(last.name)} (${last.stops.length} stops)</button>`;
-    $('rbtn').onclick = () => { STATE = last; $('start').style.display = 'none'; showMap(); };
+    $('rbtn').onclick = () => { STATE = last; showMap(); go('map'); setSheet('half'); };
   }
 })();
 
@@ -606,7 +673,7 @@ function focusStop(s) {
   map.flyTo({ center: [s.lon, s.lat], zoom: Math.max(map.getZoom(), 16.5), speed: 1.6 });
   Object.values(markers).forEach(m => m.getPopup().isOpen() && m.togglePopup());
   setTimeout(() => markers[s.stop].togglePopup(), 350);
-  if (innerWidth <= 760) { $('side').classList.add('min'); $('toggle').textContent = 'List'; }
+  if (phone()) leaveFull('min');
 }
 // ---------- sidebar ----------
 function renderZones() {
@@ -632,7 +699,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
   ['list', 'analysis', 'issues'].forEach(t => $(t).hidden = b.dataset.t !== t);
 });
-$('toggle').onclick = () => { const sd = $('side'); sd.classList.toggle('min'); $('toggle').textContent = sd.classList.contains('min') ? 'List' : 'Hide'; setTimeout(() => map && map.resize(), 60); };
+
 const vis = (id, on) => map && map.getLayer(id) && map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
 $('optDrive').onchange = e => { vis('drive', e.target.checked); vis('drive-case', e.target.checked); };
 $('optArrows').onchange = e => vis('arrows', e.target.checked);
@@ -675,7 +742,7 @@ function renderIssues() {
   $('issues').querySelectorAll('.item').forEach(el => el.onclick = () => focusStop(STATE.stops.find(s => s.stop === +el.dataset.s)));
 }
 // manual placement of unresolved addresses
-function startPlacing(seq) { placingSeq = seq; $('placing').style.display = 'block'; map.getCanvas().style.cursor = 'crosshair'; if (innerWidth <= 760) { $('side').classList.add('min'); $('toggle').textContent = 'List'; } }
+function startPlacing(seq) { placingSeq = seq; $('placing').style.display = 'block'; map.getCanvas().style.cursor = 'crosshair'; if (phone()) leaveFull('min'); }
 function finishPlacing(ll) {
   const u = STATE.unresolved.find(x => x.seq === placingSeq); placingSeq = null; $('placing').style.display = 'none'; map.getCanvas().style.cursor = '';
   if (!u) return;
