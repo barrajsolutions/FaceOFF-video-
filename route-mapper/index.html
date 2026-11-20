@@ -46,6 +46,14 @@ header{padding:12px 14px 8px;border-bottom:1px solid var(--line)}
 .sec table{width:100%;border-collapse:collapse;font-size:12.5px}.sec td,.sec th{padding:4px 6px;border-bottom:1px solid #f1f3f4;text-align:left;vertical-align:top}.sec td.r{text-align:right;white-space:nowrap}
 .note{background:#e8f0fe;border-radius:10px;padding:8px 10px;font-size:12.5px;margin:8px 0}
 .warn{background:#fce8e6;border-radius:10px;padding:8px 10px;font-size:12.5px;margin:8px 0}
+.depot{margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.depot label{font-weight:500;display:block;margin-bottom:6px}
+.depot .row{display:flex;gap:6px}.depot input{flex:1;min-width:0;padding:8px 12px;border:1px solid var(--line);border-radius:20px;font-size:16px}
+.dmsg{font-size:12.5px;color:var(--muted);margin-top:6px}.dmsg.ok{color:#188038}.dmsg.err{color:var(--red)}
+#dline{margin-top:6px;font-size:12.5px;color:var(--fg);background:#f3e8fd;border-radius:10px;padding:5px 9px}
+#dline b{color:#7627bb}#dline a{color:var(--blue);cursor:pointer;text-decoration:underline}
+.wpin{background:#202124;color:#fff;border:2px solid #fff;border-radius:8px;padding:2px 7px;font-weight:700;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.45);white-space:nowrap;cursor:pointer}
+.dist td.r{font-variant-numeric:tabular-nums}.dist tr.tot td{font-weight:700;border-top:2px solid var(--line)}
 .exports{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px;border-bottom:1px solid var(--line)}
 /* markers */
 .pin{border-radius:12px;color:#fff;font-weight:700;font-size:11.5px;line-height:17px;padding:1px 6px;white-space:nowrap;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:pointer}
@@ -109,6 +117,7 @@ header{padding:12px 14px 8px;border-bottom:1px solid var(--line)}
   </div>
   <div id="prog" hidden><div id="ptitle" style="font-weight:500;margin-top:14px"></div><div class="bar"><i id="pbar"></i></div><div id="plog"></div></div>
   <div id="resume" hidden style="margin-top:14px"></div>
+  <div id="depotStart"></div>
  </div>
 </div>
 <div id="app">
@@ -117,14 +126,15 @@ header{padding:12px 14px 8px;border-bottom:1px solid var(--line)}
    <div class="grab" id="grab" title="Drag up for the full list"></div>
    <div class="brand"><button class="btn" id="backbtn" type="button">‹ Routes</button><h1><span id="rn"></span></h1><button class="btn pri" id="toggle" type="button">Hide</button></div>
    <div class="rname" id="rsub"></div>
-   <div class="kpis"><div class="kpi"><b id="k1"></b><span>packages</span></div><div class="kpi"><b id="k2"></b><span>stops</span></div><div class="kpi"><b id="k3"></b><span>shared stops</span></div><div class="kpi"><b id="k4"></b><span>road km</span></div></div>
+   <div class="kpis"><div class="kpi"><b id="k1"></b><span>packages</span></div><div class="kpi"><b id="k2"></b><span>stops</span></div><div class="kpi"><b id="k4"></b><span>route km</span></div><div class="kpi"><b id="k5"></b><span>total km</span></div></div>
+   <div id="dline"></div>
    <input id="search" type="search" placeholder="Search address, seq # or tracking" autocomplete="off">
   </header>
   <div class="tabs"><button class="on" data-t="list">Stops</button><button data-t="analysis">Analysis</button><button data-t="issues">Issues <span id="icount"></span></button></div>
   <div class="zones" id="zones"></div>
   <div class="opts"><label><input type="checkbox" id="optDrive" checked> Driving route</label><label><input type="checkbox" id="optArrows" checked> Arrows</label><label><input type="checkbox" id="optLine"> Straight-line order</label></div>
   <div class="pane" id="list"></div>
-  <div class="pane" id="analysis" hidden><div class="exports"><button class="btn" id="exStops">Stops CSV</button><button class="btn" id="exPk">Packages CSV</button><button class="btn" id="exKml">Google My Maps (KML)</button></div><div class="sec" id="anbody"></div></div>
+  <div class="pane" id="analysis" hidden><div class="exports"><button class="btn" id="exStops">Stops CSV</button><button class="btn" id="exPk">Packages CSV</button><button class="btn" id="exKml">Google My Maps (KML)</button></div><div class="sec" id="anDepot" style="padding-bottom:0"></div><div class="sec" id="anbody"></div></div>
   <div class="pane sec" id="issues" hidden></div>
  </aside>
  <div id="mapwrap"><div id="map"></div>
@@ -612,8 +622,8 @@ async function showMap() {
   ZC = {}; [...new Set(S.map(s => s.zone))].forEach((z, i) => ZC[z] = PALETTE[i % PALETTE.length]);
   $('rn').textContent = STATE.name;
   $('rsub').textContent = `${Object.keys(A.pkByMuni).join(' · ')}`;
-  $('k1').textContent = A.packages; $('k2').textContent = A.stops; $('k3').textContent = A.shared;
-  $('k4').textContent = STATE.drive ? STATE.drive.km.toFixed(1) : '–';
+  $('k1').textContent = A.packages; $('k2').textContent = A.stops;
+  if (DEPOT && !depotLegValid()) updateDepotLeg(); refreshDistances();
   const issues = STATE.unresolved.length + S.filter(s => s.flags.length).length;
   $('icount').textContent = issues ? `(${issues})` : '';
   renderZones(); renderList(''); renderAnalysis(A); renderIssues();
@@ -642,6 +652,7 @@ async function showMap() {
       map.addImage('chev', { width: 24, height: 24, data: x.getImageData(0, 0, 24, 24).data });
       map.addLayer({ id: 'arrows', type: 'symbol', source: 'drive', layout: { 'symbol-placement': 'line', 'symbol-spacing': 90, 'icon-image': 'chev', 'icon-size': ['interpolate', ['linear'], ['zoom'], 10, .45, 16, .8], 'icon-allow-overlap': true, 'icon-ignore-placement': true } });
     } else { $('optLine').checked = true; map.setLayoutProperty('straight', 'visibility', 'visible'); }
+    drawDepot();
   });
   map.on('click', e => { if (placingSeq != null) finishPlacing(e.lngLat); });
   addMarkers();
@@ -705,7 +716,7 @@ $('optDrive').onchange = e => { vis('drive', e.target.checked); vis('drive-case'
 $('optArrows').onchange = e => vis('arrows', e.target.checked);
 $('optLine').onchange = e => vis('straight', e.target.checked);
 $('bSat').onclick = () => { satOn = !satOn; vis('sat', satOn); $('bSat').classList.toggle('on', satOn); $('bSat').textContent = satOn ? 'Map' : 'Satellite'; };
-$('bFit').onclick = () => map.fitBounds(boundsOf(STATE.stops), { padding: 40 });
+$('bFit').onclick = () => { const b = boundsOf(STATE.stops); if (STATE.depotLeg) b.extend([STATE.depotLeg.depot.lon, STATE.depotLeg.depot.lat]); map.fitBounds(b, { padding: 40 }); };
 $('bLoc').onclick = () => navigator.geolocation && navigator.geolocation.getCurrentPosition(p => {
   const ll = [p.coords.longitude, p.coords.latitude];
   if (!window.meMarker) { const el = document.createElement('div'); el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)'; window.meMarker = new maplibregl.Marker({ element: el }).setLngLat(ll).addTo(map); }
@@ -714,11 +725,13 @@ $('bLoc').onclick = () => navigator.geolocation && navigator.geolocation.getCurr
 }, () => alert('Location not available'));
 function tbl(rows, h) { return `<table><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td${typeof c === 'number' ? ' class="r"' : ''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`; }
 function renderAnalysis(A) {
+  if (!$('depotIn2')) depotForm($('anDepot'), 'depotIn2');
   const by = {}; STATE.stops.forEach(s => by[s.stop] = s);
   const roadLegs = STATE.drive ? STATE.drive.legs : null;
   const legs = A.legs.map((l, i) => ({ ...l, road: roadLegs ? roadLegs[i] : null })).sort((a, b) => (b.road ?? b.km) - (a.road ?? a.km)).slice(0, 8);
   $('anbody').innerHTML = `
-  <div class="note"><b>Driving distance: ${STATE.drive ? STATE.drive.km.toFixed(1) + ' km' : 'not available (routing service unreachable)'}</b> through all stops in manifest order, on OpenStreetMap roads (OSRM). Trips from and back to the depot are not included. The straight-line total is ${A.straightKm.toFixed(1)} km.</div>
+  <h3>Distances (driving, OpenStreetMap roads)</h3>${distTable()}
+  <p style="font-size:12px;color:#5f6368">Route = from the first delivery to the last, in manifest order. The trip back to the warehouse is not counted. For comparison, the straight-line length of the route is ${A.straightKm.toFixed(1)} km.</p>
   <h3>Packages vs stops</h3>${tbl([['Packages', A.packages], ['Placed on map', A.located], ['Physical stops (buildings)', A.stops], ['Stops with 2+ packages', A.shared], ['Packages at shared stops', A.sharedPk], ['Stops if each unit counted', A.unitLevel]], ['', ''])}
   <h3>Biggest stops</h3>${tbl(A.biggest, ['Address', 'Seq', 'Pkgs'])}
   <h3>Stops per municipality</h3>${tbl(A.byMuni.map(([m, n]) => [m, n, A.pkByMuni[m]]), ['Municipality', 'Stops', 'Pkgs'])}
@@ -757,6 +770,88 @@ function finishPlacing(ll) {
   $('k2').textContent = STATE.stops.length;
 }
 function rebuildPath() { const bySeq = {}; STATE.stops.forEach(s => s.seqs.forEach(q => bySeq[q] = s.stop)); const p = []; Object.keys(bySeq).map(Number).sort((a, b) => a - b).forEach(q => { const n = bySeq[q]; if (p[p.length - 1] !== n) p.push(n); }); return p; }
+// ---------- warehouse (start point) ----------
+let DEPOT = store.get('rm_depot'), depotMarker = null;
+async function geocodeFree(text) {
+  const nums = text.match(/\d+/g) || [];
+  const cands = await aq(text, 6);
+  const c = cands.find(c => nums.includes(c.p.civic)) || (nums.length ? null : cands[0]);
+  if (c) return { text, lat: c.lat, lon: c.lon, label: c.nom.replace(/\s+([A-Z]\d[A-Z])(\d[A-Z]\d)$/, ' $1 $2') };
+  const d = await getJSON('https://nominatim.openstreetmap.org/search?' + new URLSearchParams({ q: text + ', Québec, Canada', format: 'jsonv2', limit: 1 }), 2);
+  if (d[0]) return { text, lat: +d[0].lat, lon: +d[0].lon, label: d[0].display_name };
+  return null;
+}
+function depotForm(box, id) {
+  box.innerHTML = `<div class="depot"><label for="${id}">Warehouse (every route starts here)</label><div class="row"><input id="${id}" type="text" autocomplete="street-address" placeholder="Number, street, city" value="${esc(DEPOT ? DEPOT.text : '')}"><button class="btn pri" type="button" id="${id}-save">Save</button></div><div class="dmsg ${DEPOT ? 'ok' : ''}" id="${id}-msg">${DEPOT ? '✓ ' + esc(DEPOT.label) : 'Not set yet. Type the warehouse address and tap Save.'}</div></div>`;
+  const save = async () => {
+    const t = $(id).value.trim(), msg = $(id + '-msg');
+    if (!t) { msg.className = 'dmsg err'; msg.textContent = 'Type the address first (number, street, city).'; return; }
+    msg.className = 'dmsg'; msg.textContent = 'Searching…';
+    try {
+      const r = await geocodeFree(t);
+      if (!r) { msg.className = 'dmsg err'; msg.textContent = 'Address not found. Check the number, street and city.'; return; }
+      DEPOT = r; store.set('rm_depot', r);
+      ['depotStart', 'anDepot'].forEach(b => { if ($(b) && $(b) !== box) depotForm($(b), b === 'depotStart' ? 'depotIn1' : 'depotIn2'); });
+      msg.className = 'dmsg ok'; msg.textContent = '✓ ' + r.label;
+      if (STATE) await updateDepotLeg();
+    } catch (e) { msg.className = 'dmsg err'; msg.textContent = 'No connection. Try again.'; }
+  };
+  $(id + '-save').onclick = save; $(id).onkeydown = e => { if (e.key === 'Enter') save(); };
+}
+function depotLegValid() {
+  const d = STATE && STATE.depotLeg;
+  return !!(d && DEPOT && d.depot.lat === DEPOT.lat && d.depot.lon === DEPOT.lon && d.first === STATE.path[0]);
+}
+async function updateDepotLeg() {
+  if (!STATE || !DEPOT || !STATE.path.length) return;
+  const first = STATE.stops.find(s => s.stop === STATE.path[0]);
+  const to = first.snap || [first.lon, first.lat];
+  try {
+    const d = await getJSON(`${OSRM}/route/v1/driving/${DEPOT.lon.toFixed(6)},${DEPOT.lat.toFixed(6)};${to[0].toFixed(6)},${to[1].toFixed(6)}?overview=full&geometries=geojson`);
+    const r = d.routes[0];
+    STATE.depotLeg = { km: r.distance / 1000, min: r.duration / 60, geom: r.geometry.coordinates.map(c => [+c[0].toFixed(5), +c[1].toFixed(5)]), depot: { lat: DEPOT.lat, lon: DEPOT.lon, label: DEPOT.label }, first: first.stop };
+  } catch (e) { STATE.depotLeg = null; }
+  store.set('rm_last', STATE);
+  refreshDistances(); drawDepot();
+}
+function distTable() {
+  const leg = STATE.depotLeg && depotLegValid() ? STATE.depotLeg : null, route = STATE.drive ? STATE.drive.km : null;
+  const first = STATE.stops.find(s => s.stop === STATE.path[0]), last = STATE.stops.find(s => s.stop === STATE.path[STATE.path.length - 1]);
+  const f = v => v == null ? '–' : v.toFixed(1) + ' km';
+  return `<table class="dist"><tr><td>Warehouse → first stop<br><span style="color:#5f6368;font-size:12px">${leg ? esc(leg.depot.label) : 'warehouse not set'} → ${first ? esc(first.address) : ''}</span></td><td class="r">${f(leg && leg.km)}</td></tr>
+  <tr><td>Route: first stop → last stop<br><span style="color:#5f6368;font-size:12px">${first ? esc(first.address) : ''} → ${last ? esc(last.address) : ''}</span></td><td class="r">${f(route)}</td></tr>
+  <tr class="tot"><td>Total</td><td class="r">${leg && route != null ? f(leg.km + route) : '–'}</td></tr></table>`;
+}
+function refreshDistances() {
+  if (!STATE) return;
+  const leg = STATE.depotLeg && depotLegValid() ? STATE.depotLeg : null, route = STATE.drive ? STATE.drive.km : null;
+  $('k4').textContent = route != null ? route.toFixed(1) : '–';
+  $('k5').textContent = leg && route != null ? (leg.km + route).toFixed(1) : '–';
+  $('dline').innerHTML = leg ? `Warehouse → 1st stop: <b>${leg.km.toFixed(1)} km</b> · Route: <b>${route != null ? route.toFixed(1) : '–'} km</b> · Total: <b>${route != null ? (leg.km + route).toFixed(1) : '–'} km</b>`
+    : DEPOT ? 'Calculating the trip from the warehouse…' : `Add your warehouse to count the trip to the first stop. <a id="dset">Set warehouse</a>`;
+  const ds = $('dset'); if (ds) ds.onclick = () => { document.querySelector('.tabs button[data-t=analysis]').click(); if (phone()) openFull(); setTimeout(() => $('depotIn2') && $('depotIn2').focus(), 300); };
+  if (STATE.analysis) renderAnalysis(STATE.analysis);
+}
+function drawDepot() {
+  if (!map) return;
+  const leg = STATE.depotLeg && depotLegValid() ? STATE.depotLeg : null;
+  if (depotMarker) { depotMarker.remove(); depotMarker = null; }
+  if (!leg) { if (map.getLayer && map.getLayer('depot-line')) map.setLayoutProperty('depot-line', 'visibility', 'none'); return; }
+  const el = document.createElement('div'); el.className = 'wpin'; el.textContent = 'Warehouse';
+  depotMarker = new maplibregl.Marker({ element: el }).setLngLat([leg.depot.lon, leg.depot.lat])
+    .setPopup(new maplibregl.Popup({ offset: 14 }).setHTML(`<div class="pop"><h4>Warehouse</h4><div>${esc(leg.depot.label)}</div><div style="margin-top:5px">To the first stop: <b>${leg.km.toFixed(1)} km</b></div></div>`)).addTo(map);
+  const draw = () => {
+    const data = { type: 'Feature', geometry: { type: 'LineString', coordinates: leg.geom } };
+    if (map.getSource('depot')) map.getSource('depot').setData(data);
+    else {
+      map.addSource('depot', { type: 'geojson', data });
+      map.addLayer({ id: 'depot-line', type: 'line', source: 'depot', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#9334e6', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 3, 16, 7], 'line-dasharray': [2, 1.2], 'line-opacity': .9 } }, map.getLayer('drive-case') ? 'drive-case' : undefined);
+    }
+    map.setLayoutProperty('depot-line', 'visibility', 'visible');
+  };
+  if (map.isStyleLoaded() && map.getSource('sat')) draw(); else map.once('load', draw);
+}
+depotForm($('depotStart'), 'depotIn1');
 // ---------- exports ----------
 function download(name, text, type) { const b = new Blob([text], { type }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
 const csvq = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -772,6 +867,7 @@ $('exKml').onclick = () => {
   const zi = Object.keys(ZC);
   STATE.stops.forEach(s => k += `<Placemark><name>${x(s.label)}</name><description><![CDATA[Stop #${s.stop} · ${s.packages.length} pkg<br>${x(s.address)}, ${x(s.municipality)}<br>${s.units.length ? 'Units: ' + x(s.units.join(', ')) + '<br>' : ''}${s.packages.map(p => 'Seq ' + p.seq + ': ' + x(p.tracking)).join('<br>')}${s.flags.length ? '<br>⚠ ' + x(s.flags.join(' | ')) : ''}]]></description><styleUrl>#z${zi.indexOf(s.zone)}</styleUrl><Point><coordinates>${s.lon},${s.lat},0</coordinates></Point></Placemark>`);
   k += `</Folder>`;
+  if (STATE.depotLeg) { const d = STATE.depotLeg; k += `<Style id="wh"><LineStyle><color>ffbb2776</color><width>4</width></LineStyle></Style><Placemark><name>Warehouse</name><description>${x(d.depot.label)}</description><Point><coordinates>${d.depot.lon},${d.depot.lat},0</coordinates></Point></Placemark><Placemark><name>Warehouse to first stop ${d.km.toFixed(1)} km</name><styleUrl>#wh</styleUrl><LineString><tessellate>1</tessellate><coordinates>${d.geom.map(c => c[0] + ',' + c[1] + ',0').join(' ')}</coordinates></LineString></Placemark>`; }
   if (STATE.drive) k += `<Placemark><name>Driving route ${STATE.drive.km.toFixed(1)} km</name><styleUrl>#rt</styleUrl><LineString><tessellate>1</tessellate><coordinates>${STATE.drive.geom.map(c => c[0] + ',' + c[1] + ',0').join(' ')}</coordinates></LineString></Placemark>`;
   k += `</Document></kml>`;
   download(`${STATE.name}_mymaps.kml`, k, 'application/vnd.google-earth.kml+xml');
