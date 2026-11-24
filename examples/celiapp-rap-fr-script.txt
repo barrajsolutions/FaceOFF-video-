@@ -1,0 +1,21 @@
+Vous achetez votre première maison? Deux comptes peuvent bâtir votre mise de fonds : le CELIAPP et le RAP, le Régime d'accession à la propriété. [CELIAPP + RAP] {house}
+
+Pour y avoir droit, vous devez être un premier acheteur. Ni vous ni votre conjoint n'avez habité une maison vous appartenant cette année ou dans les quatre années précédentes. [Premier acheteur : 4 ans] {person}
+
+Le CELIAPP vous donne une déduction d'impôt quand vous cotisez, et des retraits libres d'impôt pour acheter votre maison. [Déductible · Retrait libre d'impôt] {money}
+
+Vous pouvez cotiser huit mille dollars par année, jusqu'à quarante mille dollars à vie. Vos droits commencent seulement à l'ouverture du compte. Alors, ouvrez-le tôt. [8 000 $/an · 40 000 $ à vie] {calendar}
+
+La date limite est le trente et un décembre. Contrairement au REER, il n'y a pas de période de soixante jours. [Date limite : 31 décembre] {clock}
+
+Le RAP vous permet de retirer jusqu'à soixante mille dollars de votre REER pour acheter votre maison. [RAP : jusqu'à 60 000 $] {growth}
+
+Mais l'argent doit rester dans votre REER au moins quatre-vingt-dix jours, et vous le remboursez sur quinze ans, à partir de la deuxième année. [90 jours · Remboursement sur 15 ans] {warning}
+
+Le meilleur? Vous pouvez utiliser les deux pour la même maison. Utilisez d'abord le CELIAPP, qu'on ne rembourse jamais, puis complétez avec le RAP. [CELIAPP d'abord, puis RAP] {target}
+
+Ça donne jusqu'à cent mille dollars par personne, et deux cent mille dollars pour un couple, plus le rendement. [100 000 $ chacun · 200 000 $ en couple] {trophy}
+
+Pour retirer, il vous faut une entente écrite d'achat, et vous devez prévoir d'habiter la maison d'ici un an. [Offre signée · Y habiter d'ici 1 an] {check}
+
+Planifiez tôt, ouvrez votre CELIAPP dès aujourd'hui, et ayez vos clés plus vite. [Vos clés, plus vite!] {rocket}
