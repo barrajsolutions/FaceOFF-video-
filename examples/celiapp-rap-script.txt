@@ -1,0 +1,21 @@
+Buying your first home? Two accounts can build your down payment: the CELIAPP and the RAP, the Home Buyers' Plan. [CELIAPP + RAP] {house}
+
+To qualify, you must be a first-time buyer. You and your spouse didn't live in a home you owned this year or in the previous four. [First-time buyer: 4 years] {person}
+
+The CELIAPP gives you a tax deduction when you put money in, and tax-free withdrawals to buy your home. [Deduct in · Tax-free out] {money}
+
+You can put in eight thousand dollars a year, up to forty thousand in your lifetime. Your room only starts once the account is open, so open it early. [$8,000/yr · $40,000 max] {calendar}
+
+The deadline is December thirty-first. Unlike the RRSP, there's no extra sixty days. [Deadline: Dec 31] {clock}
+
+The RAP lets you take up to sixty thousand dollars out of your RRSP to buy your home. [RAP: up to $60,000] {growth}
+
+But the money must sit in your RRSP for at least ninety days first, and you pay it back over fifteen years, starting in the second year. [90 days · Repay over 15 years] {warning}
+
+The best part: you can use both for the same home. Use your CELIAPP first, since you never pay it back, then top up with the RAP. [CELIAPP first, then RAP] {target}
+
+That's up to one hundred thousand dollars per person, and two hundred thousand for a couple, plus growth. [$100,000 each · $200,000 a couple] {trophy}
+
+To withdraw, you need a signed purchase agreement, and you must plan to move in within a year. [Signed offer · Move in within 1 year] {check}
+
+Plan ahead, open your CELIAPP today, and get your keys sooner. [Your first home, sooner!] {rocket}
